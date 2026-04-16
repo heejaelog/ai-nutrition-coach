@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-
-const SNS_BUTTONS = [
-  { key: 'naver', label: '네이버', bg: '#03C75A', color: '#fff' },
-  { key: 'google', label: 'G', bg: '#fff', color: '#374151', border: '#D1D5DB' },
-  { key: 'apple', label: '🍎', bg: '#fff', color: '#000', border: '#D1D5DB' },
-];
+import { C } from '../theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const { login } = useAuth();
 
   const handleLogin = () => {
@@ -26,81 +23,131 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.inner}>
+    <View style={styles.root}>
+      {/* 상단 녹색 히어로 */}
+      <View style={styles.hero}>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.heroContent}>
+            <Image source={require('../../assets/꼬부기.png')} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.appName}>꼬부기 헬스케어</Text>
+            <Text style={styles.appSub}>AI 맞춤형 영양·운동 코칭</Text>
+          </View>
+        </SafeAreaView>
+      </View>
 
-        <View style={styles.logoArea}>
-          <Image source={require('../../assets/꼬부기.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>꼬부기 헬스케어 코칭</Text>
-          <Text style={styles.subtitle}>맞춤형 영양·운동 관리 서비스</Text>
-        </View>
+      {/* 하단 폼 */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
 
-        <TextInput
-          style={styles.input}
-          placeholder="ID / Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          <Text style={styles.formTitle}>로그인</Text>
 
-        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
-          <Text style={styles.loginBtnText}>로그인</Text>
-        </TouchableOpacity>
+          <View style={styles.inputWrap}>
+            <Ionicons name="mail-outline" size={18} color={C.muted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="이메일"
+              placeholderTextColor={C.muted}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-        <TouchableOpacity style={styles.signupBtn}>
-          <Text style={styles.signupText}>회원가입</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.snsLabel}>SNS 계정으로 로그인</Text>
-        <View style={styles.snsRow}>
-          {SNS_BUTTONS.map((btn) => (
-            <TouchableOpacity
-              key={btn.key}
-              style={[
-                styles.snsBtn,
-                { backgroundColor: btn.bg },
-                btn.border && { borderWidth: 1, borderColor: btn.border },
-              ]}
-            >
-              <Text style={[styles.snsBtnText, { color: btn.color }]}>{btn.label}</Text>
+          <View style={styles.inputWrap}>
+            <Ionicons name="lock-closed-outline" size={18} color={C.muted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호"
+              placeholderTextColor={C.muted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPw}
+            />
+            <TouchableOpacity onPress={() => setShowPw(!showPw)} style={styles.eyeBtn}>
+              <Ionicons name={showPw ? 'eye-outline' : 'eye-off-outline'} size={18} color={C.muted} />
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
 
+          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} activeOpacity={0.85}>
+            <Text style={styles.loginBtnText}>로그인</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.signupRow}>
+            <Text style={styles.signupText}>아직 계정이 없으신가요? </Text>
+            <Text style={styles.signupLink}>회원가입</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>또는</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <View style={styles.snsRow}>
+            <TouchableOpacity style={[styles.snsBtn, { backgroundColor: '#03C75A' }]}>
+              <Text style={[styles.snsBtnText, { color: '#fff' }]}>N</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.snsBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }]}>
+              <Text style={[styles.snsBtnText, { color: '#374151' }]}>G</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.snsBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }]}>
+              <Ionicons name="logo-apple" size={20} color="#000" />
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 32 },
-  logoArea: { alignItems: 'center', marginBottom: 36 },
-  logo: { width: 90, height: 90, marginBottom: 12 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1D4ED8', marginBottom: 6 },
-  subtitle: { fontSize: 13, color: '#6B7280' },
-  input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB',
-    borderRadius: 10, padding: 14, marginBottom: 12, fontSize: 15,
+  root: { flex: 1, backgroundColor: '#fff' },
+
+  hero: { backgroundColor: C.hero },
+  heroContent: { alignItems: 'center', paddingVertical: 36 },
+  logo: { width: 80, height: 80, marginBottom: 12 },
+  appName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  appSub: { fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: '400' },
+
+  form: { padding: 28, paddingTop: 32 },
+  formTitle: { fontSize: 24, fontWeight: '800', color: C.text, marginBottom: 24 },
+
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.bg, borderRadius: 14,
+    paddingHorizontal: 14, marginBottom: 14,
+    borderWidth: 1, borderColor: C.border,
+    height: 52,
   },
-  loginBtn: { backgroundColor: '#3B82F6', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },
-  loginBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  signupBtn: { alignItems: 'center', marginTop: 16 },
-  signupText: { color: '#3B82F6', fontSize: 14 },
-  snsLabel: { textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 32, marginBottom: 16 },
-  snsRow: { flexDirection: 'row', justifyContent: 'center' },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 15, color: C.text },
+  eyeBtn: { padding: 4 },
+
+  loginBtn: {
+    backgroundColor: C.primary, borderRadius: 14,
+    height: 52, alignItems: 'center', justifyContent: 'center',
+    marginTop: 4, marginBottom: 16,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  loginBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+
+  signupRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 28 },
+  signupText: { color: C.sub, fontSize: 14 },
+  signupLink: { color: C.primary, fontWeight: '700', fontSize: 14 },
+
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  divider: { flex: 1, height: 1, backgroundColor: C.border },
+  dividerText: { color: C.muted, fontSize: 13, marginHorizontal: 12 },
+
+  snsRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   snsBtn: {
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center',
-    marginHorizontal: 10, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
-  snsBtnText: { fontWeight: 'bold', fontSize: 15 },
+  snsBtnText: { fontWeight: '700', fontSize: 16 },
 });

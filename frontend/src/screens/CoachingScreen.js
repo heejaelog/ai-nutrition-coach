@@ -8,6 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { C } from '../theme';
 
+// 스킨 적용 시 이 소스만 교체하면 됨
+const TURTLE_IMG = require('../../assets/꼬부기.png');
+
 // MVP: 룰 기반 초기 코칭 메시지
 const INIT_MESSAGES = [
   {
@@ -30,7 +33,7 @@ function Bubble({ item }) {
     <View style={[styles.bubbleRow, isAI ? styles.bubbleRowAI : styles.bubbleRowUser]}>
       {isAI && (
         <View style={styles.avatar}>
-          <Text style={{ fontSize: 16 }}>🐢</Text>
+          <Image source={TURTLE_IMG} style={styles.bubbleAvatarImg} resizeMode="contain" />
         </View>
       )}
       <View style={[styles.bubble, isAI ? styles.bubbleAI : styles.bubbleUser]}>
@@ -71,7 +74,7 @@ export default function CoachingScreen() {
           <View style={styles.headerInner}>
             <View style={styles.headerLeft}>
               <View style={styles.headerAvatar}>
-                <Text style={{ fontSize: 20 }}>🐢</Text>
+                <Image source={TURTLE_IMG} style={styles.headerAvatarImg} resizeMode="contain" />
               </View>
               <View>
                 <Text style={styles.headerTitle}>꼬부기 AI 코치</Text>
@@ -149,6 +152,8 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: C.mintSoft, alignItems: 'center', justifyContent: 'center',
   },
+  bubbleAvatarImg: { width: 22, height: 22 },
+  headerAvatarImg: { width: 28, height: 28 },
   bubble: { maxWidth: '75%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleAI: {
     backgroundColor: '#fff',

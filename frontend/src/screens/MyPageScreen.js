@@ -1,11 +1,14 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { C, card } from '../theme';
+
+// 스킨 적용 시 이 소스만 교체하면 됨
+const TURTLE_IMG = require('../../assets/꼬부기.png');
 
 function Row({ icon, label, value, onPress, danger }) {
   return (
@@ -42,7 +45,7 @@ export default function MyPageScreen() {
         <SafeAreaView edges={['top']}>
           <View style={styles.heroInner}>
             <View style={styles.avatarWrap}>
-              <Text style={styles.avatarEmoji}>🐢</Text>
+              <Image source={TURTLE_IMG} style={styles.avatarImg} resizeMode="contain" />
             </View>
             <Text style={styles.userName}>{user?.name}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.25)',
   },
-  avatarEmoji: { fontSize: 38 },
+  avatarImg: { width: 56, height: 56 },
   userName: { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 2 },
   userEmail: { color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 20 },
 

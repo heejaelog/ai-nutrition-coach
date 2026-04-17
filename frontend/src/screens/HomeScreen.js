@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { C, card, shadow } from '../theme';
+
+// 스킨 적용 시 이 소스만 교체하면 됨
+const TURTLE_IMG = require('../../assets/꼬부기.png');
 
 // 원형 점수 링
 function ScoreRing({ score }) {
@@ -104,7 +107,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => {/* TODO: 컬렉션 화면 */}}
                 activeOpacity={0.75}
               >
-                <Text style={styles.turtleEmoji}>🐢</Text>
+                <Image source={TURTLE_IMG} style={styles.turtleImg} resizeMode="contain" />
                 <Text style={styles.turtleCount}>× {turtleCount}</Text>
                 <View style={styles.turtleDivider} />
                 <Text style={styles.turtleNext}>다음 스킨까지 {toNext}개</Text>
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
-  turtleEmoji: { fontSize: 14 },
+  turtleImg: { width: 18, height: 18 },
   turtleCount: { color: '#fff', fontSize: 13, fontWeight: '700' },
   turtleDivider: { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.25)' },
   turtleNext: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },

@@ -8,18 +8,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { C } from '../theme';
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('알림', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
-    login({ name: '사용자', email });
+    try {
+      setLoading(true);
+      await login(email, password);
+    } catch (e) {
+      Alert.alert('로그인 실패', e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,11 +77,11 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} activeOpacity={0.85}>
-            <Text style={styles.loginBtnText}>로그인</Text>
+          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+            <Text style={styles.loginBtnText}>{loading ? '로그인 중...' : '로그인'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.signupRow}>
+          <TouchableOpacity style={styles.signupRow} onPress={() => navigation.navigate('Register')}>
             <Text style={styles.signupText}>아직 계정이 없으신가요? </Text>
             <Text style={styles.signupLink}>회원가입</Text>
           </TouchableOpacity>

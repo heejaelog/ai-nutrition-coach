@@ -1,27 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { api } from '../api';
 import { C, card } from '../theme';
 
 const W = Dimensions.get('window').width;
 
-const weeklyData = {
-  labels: ['월', '화', '수', '목', '금', '토', '일'],
-  water:    [1200, 1500, 1800, 1400, 2000, 1600, 1500],
-  protein:  [70,   80,   90,   75,   110,  85,   80],
-  exercise: [30,   50,   60,   40,   60,   55,   50],
+const TREND_META = {
+  '증가':      { icon: 'trending-up',   color: '#16A34A' },
+  '감소':      { icon: 'trending-down', color: '#DC2626' },
+  '유지':      { icon: 'remove',        color: '#94A3B8' },
+  '데이터 부족': { icon: null,           color: '#94A3B8' },
 };
 
-const avg = (arr) => Math.round(arr.reduce((a, b) => a + b) / arr.length);
-
-function StatChip({ icon, label, value, unit, color, bg }) {
+function StatChip({ icon, label, value, unit, color, bg, trend }) {
+  const tm = trend ? TREND_META[trend] : null;
   return (
     <View style={[styles.chip, { backgroundColor: bg }]}>
       <Ionicons name={icon} size={16} color={color} />
       <Text style={[styles.chipValue, { color }]}>{value}<Text style={styles.chipUnit}>{unit}</Text></Text>
       <Text style={styles.chipLabel}>{label} 평균</Text>
+      {tm && tm.icon && (
+        <View style={styles.trendRow}>
+          <Ionicons name={tm.icon} size={11} color={tm.color} />
+          <Text style={[styles.trendText, { color: tm.color }]}>{trend}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -35,88 +42,6 @@ function TabBtn({ label, active, onPress }) {
     >
       <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
     </TouchableOpacity>
-  );
-}
-
-export default function AnalysisScreen() {
-  const [activeTab, setActiveTab] = useState('수분');
-
-  const dataMap = {
-    수분:   { data: weeklyData.water.map((v) => v / 100), color: C.water,   label: '수분 (×100ml)', unit: 'ml' },
-    단백질: { data: weeklyData.protein,                   color: C.protein,  label: '단백질 (g)',    unit: 'g' },
-    운동:   { data: weeklyData.exercise,                  color: C.primary,  label: '운동 (분)',     unit: '분' },
-  };
-
-  const current = dataMap[activeTab];
-  const myAvg = { water: avg(weeklyData.water), protein: avg(weeklyData.protein) };
-  const avgUser = { water: 1300, protein: 65 };
-
-  return (
-    <View style={styles.root}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <SafeAreaView edges={['top']}>
-          <View style={styles.headerInner}>
-            <Text style={styles.headerTitle}>주간 리포트</Text>
-            <Text style={styles.headerSub}>4월 1일 – 7일</Text>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* 요약 칩 */}
-        <View style={styles.chipRow}>
-          <StatChip icon="water"    label="수분"   value={myAvg.water}   unit="ml" color={C.water}   bg={C.waterBg} />
-          <StatChip icon="nutrition" label="단백질" value={myAvg.protein} unit="g"  color={C.protein} bg={C.proteinBg} />
-          <StatChip icon="barbell"  label="운동"   value={avg(weeklyData.exercise)} unit="분" color={C.primary} bg={C.exerciseBg} />
-        </View>
-
-        {/* 차트 카드 */}
-        <View style={[card, { padding: 18 }]}>
-          <Text style={styles.cardTitle}>나의 섭취 패턴</Text>
-
-          {/* 탭 */}
-          <View style={styles.tabRow}>
-            {['수분', '단백질', '운동'].map((t) => (
-              <TabBtn key={t} label={t} active={activeTab === t} onPress={() => setActiveTab(t)} />
-            ))}
-          </View>
-
-          <LineChart
-            data={{
-              labels: weeklyData.labels,
-              datasets: [{ data: current.data, color: () => current.color, strokeWidth: 2.5 }],
-              legend: [current.label],
-            }}
-            width={W - 56}
-            height={180}
-            chartConfig={{
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
-              color: () => current.color,
-              strokeWidth: 2,
-              decimalPlaces: 0,
-              propsForLabels: { fontSize: 11, fill: C.sub },
-              propsForDots: { r: 4, strokeWidth: 2, stroke: current.color },
-              propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4' },
-            }}
-            bezier
-            withInnerLines
-            style={{ borderRadius: 12, marginLeft: -8, marginTop: 12 }}
-          />
-        </View>
-
-        {/* 평균 비교 카드 */}
-        <View style={[card, { padding: 18 }]}>
-          <Text style={styles.cardTitle}>평균 사용자와 비교</Text>
-
-          <CompareRow label="수분" mine={myAvg.water} avg={avgUser.water} unit="ml" color={C.water} />
-          <CompareRow label="단백질" mine={myAvg.protein} avg={avgUser.protein} unit="g" color={C.protein} />
-        </View>
-
-      </ScrollView>
-    </View>
   );
 }
 
@@ -145,6 +70,123 @@ function CompareRow({ label, mine, avg, unit, color }) {
   );
 }
 
+export default function AnalysisScreen() {
+  const [activeTab, setActiveTab] = useState('수분');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(useCallback(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await api.getWeekly();
+        setData(res);
+      } catch (e) {
+        console.error('주간 데이터 로드 실패:', e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []));
+
+  if (loading || !data) {
+    return (
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
+  }
+
+  const dataMap = {
+    수분:   { data: data.water.map((v) => v / 100 || 0.01), color: C.water,   label: '수분 (×100ml)', unit: 'ml', avg: data.avg_water, globalAvg: data.global_avg_water },
+    단백질: { data: data.protein.map((v) => v || 0.01),     color: C.protein,  label: '단백질 (g)',    unit: 'g',  avg: data.avg_protein, globalAvg: data.global_avg_protein },
+    근력:   { data: data.strength.map((v) => v || 0.01),    color: C.primary,  label: '근력 (분)',     unit: '분', avg: data.avg_strength, globalAvg: null },
+    유산소: { data: data.cardio.map((v) => v || 0.01),      color: '#F59E0B',  label: '유산소 (분)',   unit: '분', avg: data.avg_cardio, globalAvg: null },
+  };
+
+  const current = dataMap[activeTab];
+
+  return (
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerInner}>
+            <Text style={styles.headerTitle}>주간 리포트</Text>
+            <Text style={styles.headerSub}>{data.labels[0]}요일 – {data.labels[6]}요일</Text>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* 요약 칩 */}
+        <View style={styles.chipRow}>
+          <StatChip icon="water"     label="수분"   value={data.avg_water}    unit="ml" color={C.water}   bg={C.waterBg}    trend={data.water_trend} />
+          <StatChip icon="nutrition" label="단백질" value={data.avg_protein}  unit="g"  color={C.protein} bg={C.proteinBg}  trend={data.protein_trend} />
+          <StatChip icon="barbell"   label="근력"   value={data.avg_strength} unit="분" color={C.primary} bg={C.exerciseBg} trend={data.exercise_trend} />
+          <StatChip icon="bicycle"   label="유산소" value={data.avg_cardio}   unit="분" color="#F59E0B"   bg="#FFFBEB"       trend={null} />
+        </View>
+
+        {/* 차트 카드 */}
+        <View style={[card, { padding: 18 }]}>
+          <Text style={styles.cardTitle}>나의 섭취 패턴</Text>
+
+          <View style={styles.tabRow}>
+            {['수분', '단백질', '근력', '유산소'].map((t) => (
+              <TabBtn key={t} label={t} active={activeTab === t} onPress={() => setActiveTab(t)} />
+            ))}
+          </View>
+
+          <LineChart
+            data={{
+              labels: data.labels,
+              datasets: [{ data: current.data, color: () => current.color, strokeWidth: 2.5 }],
+              legend: [current.label],
+            }}
+            width={W - 56}
+            height={180}
+            chartConfig={{
+              backgroundGradientFrom: '#fff',
+              backgroundGradientTo: '#fff',
+              color: () => current.color,
+              strokeWidth: 2,
+              decimalPlaces: 0,
+              propsForLabels: { fontSize: 11, fill: C.sub },
+              propsForDots: { r: 4, strokeWidth: 2, stroke: current.color },
+              propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4' },
+            }}
+            bezier
+            withInnerLines
+            style={{ borderRadius: 12, marginLeft: -8, marginTop: 12 }}
+          />
+        </View>
+
+        {/* 클러스터 비교 카드 */}
+        <View style={[card, { padding: 18 }]}>
+          <Text style={styles.cardTitle}>
+            {data.cluster_size > 0
+              ? `나와 비슷한 사용자 ${data.cluster_size}명과 비교`
+              : '유사 사용자 비교'}
+          </Text>
+          <Text style={styles.cardSub}>{data.cluster_label}</Text>
+          {data.cluster_size > 0 ? (
+            <>
+              <CompareRow label="수분"        mine={data.avg_water    ?? 0} avg={data.cluster_avg_water     ?? 0} unit="ml" color={C.water} />
+              <CompareRow label="단백질"      mine={data.avg_protein  ?? 0} avg={data.cluster_avg_protein   ?? 0} unit="g"  color={C.protein} />
+              <CompareRow label="근력 운동"   mine={data.avg_strength ?? 0} avg={data.cluster_avg_strength  ?? 0} unit="분" color={C.primary} />
+              <CompareRow label="유산소 운동" mine={data.avg_cardio   ?? 0} avg={data.cluster_avg_cardio    ?? 0} unit="분" color="#F59E0B" />
+            </>
+          ) : (
+            <Text style={styles.noClusterText}>아직 같은 그룹의 비교 데이터가 없어요.{'\n'}사용자가 늘어나면 자동으로 비교됩니다.</Text>
+          )}
+        </View>
+
+      </ScrollView>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
@@ -155,22 +197,25 @@ const styles = StyleSheet.create({
 
   scroll: { padding: 18, paddingTop: 16 },
 
-  chipRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  chip: { flex: 1, borderRadius: 14, padding: 12, alignItems: 'center', gap: 4 },
-  chipValue: { fontSize: 16, fontWeight: '800' },
+  chipRow: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+  chip: { flex: 1, borderRadius: 14, padding: 10, alignItems: 'center', gap: 3 },
+  chipValue: { fontSize: 14, fontWeight: '800' },
   chipUnit: { fontSize: 11, fontWeight: '400' },
   chipLabel: { fontSize: 10, color: C.sub, fontWeight: '500' },
 
-  cardTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 4 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2 },
+  cardSub: { fontSize: 11, color: C.muted, marginBottom: 10 },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  trendText: { fontSize: 10, fontWeight: '600' },
 
-  tabRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  tabRow: { flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' },
   tabBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 10,
+    paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10,
     backgroundColor: C.bg, alignItems: 'center',
     borderWidth: 1, borderColor: C.border,
   },
   tabBtnActive: { backgroundColor: C.hero, borderColor: C.hero },
-  tabBtnText: { fontSize: 13, fontWeight: '600', color: C.sub },
+  tabBtnText: { fontSize: 12, fontWeight: '600', color: C.sub },
   tabBtnTextActive: { color: '#fff' },
 
   compareRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.bg },
@@ -185,4 +230,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
   badgeText: { fontSize: 12, fontWeight: '700' },
+  noClusterText: { fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 20, lineHeight: 20 },
 });

@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Modal, FlatList,
+  ScrollView, Alert, Modal, FlatList, ActivityIndicator, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 import { C, card } from '../theme';
 
-const EXERCISE_TYPES = ['웨이트', '러닝', '사이클', '수영', '요가', '기타'];
+const TURTLE_IMG = require('../../assets/꼬부기.png');
 
-function SectionCard({ icon, iconName, title, color, bg, children }) {
+const STRENGTH_TYPES = ['웨이트', '바벨', '머신', '맨몸운동', '크로스핏', '기타'];
+const CARDIO_TYPES = ['러닝', '사이클', '수영', '걷기', '줄넘기', '기타'];
+
+function SectionCard({ iconName, title, color, bg, children }) {
   return (
     <View style={[card, { padding: 18, marginBottom: 12 }]}>
       <View style={styles.sectionHeader}>
@@ -35,26 +39,162 @@ function QuickBtn({ label, onPress, color }) {
   );
 }
 
-export default function RecordScreen({ navigation }) {
-  const [water, setWater] = useState(0);
-  const [protein, setProtein] = useState(0);
-  const [exerciseMin, setExerciseMin] = useState('');
-  const [exerciseKcal, setExerciseKcal] = useState('');
-  const [selectedExercise, setSelectedExercise] = useState('');
+function ExerciseSection({ iconName, title, color, bg, types, minVal, setMin, kcalVal, setKcal, typeVal, setType }) {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleSave = () => {
-    if (water === 0 && protein === 0 && !exerciseMin) {
+  return (
+    <SectionCard iconName={iconName} title={title} color={color} bg={bg}>
+      <View style={styles.exerciseRow}>
+        <View style={styles.exerciseCol}>
+          <Text style={styles.inputLabel}>시간 (분)</Text>
+          <View style={styles.directRow}>
+            <TextInput
+              style={styles.directInput}
+              placeholder="0"
+              placeholderTextColor={C.muted}
+              value={minVal === 0 ? '' : String(minVal)}
+              onChangeText={(v) => setMin(parseInt(v) || 0)}
+              keyboardType="numeric"
+            />
+            <Text style={styles.unitLabel}>분</Text>
+          </View>
+        </View>
+        <View style={[styles.exerciseCol, { marginLeft: 12 }]}>
+          <Text style={styles.inputLabel}>소모 칼로리</Text>
+          <View style={styles.directRow}>
+            <TextInput
+              style={styles.directInput}
+              placeholder="0"
+              placeholderTextColor={C.muted}
+              value={kcalVal === 0 ? '' : String(kcalVal)}
+              onChangeText={(v) => setKcal(parseInt(v) || 0)}
+              keyboardType="numeric"
+            />
+            <Text style={styles.unitLabel}>kcal</Text>
+          </View>
+        </View>
+      </View>
+
+      <Text style={[styles.inputLabel, { marginTop: 14 }]}>운동 종류</Text>
+      <TouchableOpacity style={styles.dropdown} onPress={() => setShowDropdown(true)} activeOpacity={0.7}>
+        <Text style={[styles.dropdownText, !typeVal && { color: C.muted }]}>
+          {typeVal || '선택하세요'}
+        </Text>
+        <Ionicons name="chevron-down" size={16} color={C.muted} />
+      </TouchableOpacity>
+
+      <Modal visible={showDropdown} transparent animationType="fade">
+        <TouchableOpacity style={styles.overlay} onPress={() => setShowDropdown(false)} activeOpacity={1}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{title} 종류</Text>
+            <FlatList
+              data={types}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, typeVal === item && styles.modalItemActive]}
+                  onPress={() => { setType(item); setShowDropdown(false); }}
+                >
+                  <Text style={[styles.modalItemText, typeVal === item && styles.modalItemTextActive]}>{item}</Text>
+                  {typeVal === item && <Ionicons name="checkmark" size={16} color={C.primary} />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </SectionCard>
+  );
+}
+
+export default function RecordScreen({ navigation }) {
+  const { user, updateUser } = useAuth();
+  const [water, setWater] = useState(0);
+  const [protein, setProtein] = useState(0);
+  const [strengthMin, setStrengthMin] = useState(0);
+  const [strengthKcal, setStrengthKcal] = useState(0);
+  const [strengthType, setStrengthType] = useState('');
+  const [cardioMin, setCardioMin] = useState(0);
+  const [cardioKcal, setCardioKcal] = useState(0);
+  const [cardioType, setCardioType] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [turtleModal, setTurtleModal] = useState(false);
+  const [newTurtleCount, setNewTurtleCount] = useState(0);
+
+  // 오늘 기존 기록 불러오기
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const r = await api.getTodayRecord();
+        setWater(r.water_ml);
+        setProtein(r.protein_g);
+        setStrengthMin(r.strength_min);
+        setStrengthKcal(r.strength_kcal);
+        setStrengthType(r.strength_type);
+        setCardioMin(r.cardio_min);
+        setCardioKcal(r.cardio_kcal);
+        setCardioType(r.cardio_type);
+      } catch {}
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    if (water === 0 && protein === 0 && strengthMin === 0 && cardioMin === 0) {
       Alert.alert('알림', '최소 하나의 항목을 입력해주세요.');
       return;
     }
-    Alert.alert('저장 완료 🐢', '오늘의 기록이 저장되었어요!\n거북이 1개를 획득했습니다.', [
-      { text: '확인', onPress: () => navigation.goBack() },
-    ]);
+    try {
+      setLoading(true);
+      const res = await api.saveRecord({
+        water_ml: water,
+        protein_g: protein,
+        strength_min: strengthMin,
+        strength_kcal: strengthKcal,
+        strength_type: strengthType,
+        cardio_min: cardioMin,
+        cardio_kcal: cardioKcal,
+        cardio_type: cardioType,
+      });
+
+      // AuthContext turtle_count 갱신
+      if (res.turtle_gained) {
+        updateUser({ ...user, turtle_count: res.turtle_count });
+        setNewTurtleCount(res.turtle_count);
+        setTurtleModal(true);
+      } else {
+        Alert.alert('저장 완료', '오늘의 기록이 저장되었어요!', [
+          { text: '확인', onPress: () => navigation.goBack() },
+        ]);
+      }
+    } catch (e) {
+      Alert.alert('저장 실패', e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.root}>
+      {/* 꼬부기 획득 모달 */}
+      <Modal visible={turtleModal} transparent animationType="fade">
+        <View style={styles.turtleOverlay}>
+          <View style={styles.turtleBox}>
+            <Image source={TURTLE_IMG} style={styles.turtleModalImg} resizeMode="contain" />
+            <Text style={styles.turtleModalTitle}>꼬부기 코인 획득!</Text>
+            <Text style={styles.turtleModalMsg}>오늘의 기록을 저장했어요!{'\n'}꼬부기 코인 1개를 획득했습니다!</Text>
+            <Text style={styles.turtleModalCount}>총 {newTurtleCount}개 보유</Text>
+            <TouchableOpacity
+              style={styles.turtleModalBtn}
+              onPress={() => { setTurtleModal(false); navigation.goBack(); }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.turtleModalBtnText}>확인</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* 수분 */}
@@ -99,80 +239,34 @@ export default function RecordScreen({ navigation }) {
           </View>
         </SectionCard>
 
-        {/* 운동 */}
-        <SectionCard iconName="barbell" title="운동" color={C.primary} bg={C.exerciseBg}>
-          <View style={styles.exerciseRow}>
-            <View style={styles.exerciseCol}>
-              <Text style={styles.inputLabel}>시간 (분)</Text>
-              <View style={styles.directRow}>
-                <TextInput
-                  style={styles.directInput}
-                  placeholder="0"
-                  placeholderTextColor={C.muted}
-                  value={exerciseMin}
-                  onChangeText={setExerciseMin}
-                  keyboardType="numeric"
-                />
-                <Text style={styles.unitLabel}>분</Text>
-              </View>
-            </View>
-            <View style={[styles.exerciseCol, { marginLeft: 12 }]}>
-              <Text style={styles.inputLabel}>소모 칼로리</Text>
-              <View style={styles.directRow}>
-                <TextInput
-                  style={styles.directInput}
-                  placeholder="0"
-                  placeholderTextColor={C.muted}
-                  value={exerciseKcal}
-                  onChangeText={setExerciseKcal}
-                  keyboardType="numeric"
-                />
-                <Text style={styles.unitLabel}>kcal</Text>
-              </View>
-            </View>
-          </View>
+        {/* 근력 운동 */}
+        <ExerciseSection
+          iconName="barbell" title="근력 운동"
+          color={C.primary} bg={C.exerciseBg}
+          types={STRENGTH_TYPES}
+          minVal={strengthMin} setMin={setStrengthMin}
+          kcalVal={strengthKcal} setKcal={setStrengthKcal}
+          typeVal={strengthType} setType={setStrengthType}
+        />
 
-          <Text style={[styles.inputLabel, { marginTop: 14 }]}>운동 종류</Text>
-          <TouchableOpacity style={styles.dropdown} onPress={() => setShowDropdown(true)} activeOpacity={0.7}>
-            <Text style={[styles.dropdownText, !selectedExercise && { color: C.muted }]}>
-              {selectedExercise || '선택하세요'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={C.muted} />
-          </TouchableOpacity>
-        </SectionCard>
+        {/* 유산소 운동 */}
+        <ExerciseSection
+          iconName="bicycle" title="유산소 운동"
+          color={C.protein} bg={C.proteinBg}
+          types={CARDIO_TYPES}
+          minVal={cardioMin} setMin={setCardioMin}
+          kcalVal={cardioKcal} setKcal={setCardioKcal}
+          typeVal={cardioType} setType={setCardioType}
+        />
 
-        {/* 저장 */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-          <Text style={styles.saveBtnText}>기록 저장하기</Text>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={loading}>
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.saveBtnText}>기록 저장하기</Text>
+          }
         </TouchableOpacity>
 
       </ScrollView>
-
-      {/* 드롭다운 모달 */}
-      <Modal visible={showDropdown} transparent animationType="fade">
-        <TouchableOpacity style={styles.overlay} onPress={() => setShowDropdown(false)} activeOpacity={1}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>운동 종류 선택</Text>
-            <FlatList
-              data={EXERCISE_TYPES}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, selectedExercise === item && styles.modalItemActive]}
-                  onPress={() => { setSelectedExercise(item); setShowDropdown(false); }}
-                >
-                  <Text style={[styles.modalItemText, selectedExercise === item && styles.modalItemTextActive]}>
-                    {item}
-                  </Text>
-                  {selectedExercise === item && (
-                    <Ionicons name="checkmark" size={16} color={C.primary} />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -225,6 +319,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+
+  turtleOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 40,
+  },
+  turtleBox: {
+    backgroundColor: '#fff', borderRadius: 24,
+    alignItems: 'center', padding: 32, width: '100%',
+  },
+  turtleModalImg: { width: 100, height: 100, marginBottom: 16 },
+  turtleModalTitle: { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 10 },
+  turtleModalMsg: { fontSize: 14, color: C.sub, textAlign: 'center', lineHeight: 22, marginBottom: 8 },
+  turtleModalCount: { fontSize: 18, fontWeight: '800', color: C.primary, marginBottom: 24 },
+  turtleModalBtn: {
+    backgroundColor: C.primary, borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 40,
+  },
+  turtleModalBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox: {

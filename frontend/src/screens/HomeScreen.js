@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 import { C, card, shadow } from '../theme';
 
 // 스킨 적용 시 이 소스만 교체하면 됨
@@ -70,22 +72,38 @@ function MetricCard({ icon, label, value, max, unit, color, bg }) {
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  const [dashboard, setDashboard] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const today = {
-    water: 1500, waterGoal: 2000,
-    protein: 80, proteinGoal: 120,
-    exercise: 50, exerciseGoal: 60,
+  const loadDashboard = async () => {
+    try {
+      const data = await api.getDashboard();
+      setDashboard(data);
+    } catch (e) {
+      console.error('대시보드 로드 실패:', e.message);
+    }
   };
 
-  const score = Math.round(
-    (today.water / today.waterGoal) * 33 +
-    (today.protein / today.proteinGoal) * 33 +
-    (today.exercise / today.exerciseGoal) * 34
-  );
+  useFocusEffect(useCallback(() => { loadDashboard(); }, []));
 
-  const turtleCount = 23;
-  const nextSkin = 50;
-  const toNext = nextSkin - turtleCount;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
+  };
+
+  const water = dashboard?.water ?? 0;
+  const waterGoal = dashboard?.water_goal ?? 2000;
+  const protein = dashboard?.protein ?? 0;
+  const proteinGoal = dashboard?.protein_goal ?? 60;
+  const strengthMin = dashboard?.strength_min ?? 0;
+  const strengthGoal = dashboard?.strength_goal ?? 30;
+  const cardioMin = dashboard?.cardio_min ?? 0;
+  const cardioGoal = dashboard?.cardio_goal ?? 30;
+  const score = dashboard?.score ?? 0;
+  const turtleCount = dashboard?.turtle_count ?? 0;
+  const nextSkin = dashboard?.next_skin ?? 0;
+  const toNext = Math.max(nextSkin - turtleCount, 0);
 
   const dateStr = new Date().toLocaleDateString('ko-KR', {
     month: 'long', day: 'numeric', weekday: 'short',
@@ -123,21 +141,27 @@ export default function HomeScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <MetricCard
           icon="water" label="수분"
-          value={today.water} max={today.waterGoal} unit="ml"
+          value={water} max={waterGoal} unit="ml"
           color={C.water} bg={C.waterBg}
         />
         <MetricCard
           icon="nutrition" label="단백질"
-          value={today.protein} max={today.proteinGoal} unit="g"
+          value={protein} max={proteinGoal} unit="g"
           color={C.protein} bg={C.proteinBg}
         />
         <MetricCard
-          icon="barbell" label="운동"
-          value={today.exercise} max={today.exerciseGoal} unit="분"
+          icon="barbell" label="근력 운동"
+          value={strengthMin} max={strengthGoal} unit="분"
           color={C.primary} bg={C.exerciseBg}
+        />
+        <MetricCard
+          icon="bicycle" label="유산소 운동"
+          value={cardioMin} max={cardioGoal} unit="분"
+          color={C.protein} bg={C.proteinBg}
         />
 
         {/* 기록하기 버튼 */}

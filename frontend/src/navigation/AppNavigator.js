@@ -6,11 +6,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import RecordScreen from '../screens/RecordScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import CoachingScreen from '../screens/CoachingScreen';
 import MyPageScreen from '../screens/MyPageScreen';
+import FriendScreen from '../screens/FriendScreen';
+import FriendProfileScreen from '../screens/FriendProfileScreen';
+import SkinShopScreen from '../screens/SkinShopScreen';
 import { useAuth } from '../context/AuthContext';
 import { C } from '../theme';
 
@@ -20,6 +24,7 @@ const Tab = createBottomTabNavigator();
 const TABS = [
   { name: 'Home',     icon: 'home',         iconOutline: 'home-outline',         label: '홈' },
   { name: 'Analysis', icon: 'bar-chart',     iconOutline: 'bar-chart-outline',    label: '분석' },
+  { name: 'Friends',  icon: 'people',        iconOutline: 'people-outline',       label: '친구' },
   { name: 'Coaching', icon: 'chatbubbles',   iconOutline: 'chatbubbles-outline',  label: '코칭' },
   { name: 'MyPage',   icon: 'person',        iconOutline: 'person-outline',       label: '마이' },
 ];
@@ -59,6 +64,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home"     component={HomeScreen} />
       <Tab.Screen name="Analysis" component={AnalysisScreen} />
+      <Tab.Screen name="Friends"  component={FriendScreen} />
       <Tab.Screen name="Coaching" component={CoachingScreen} />
       <Tab.Screen name="MyPage"   component={MyPageScreen} />
     </Tab.Navigator>
@@ -66,13 +72,18 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
@@ -83,6 +94,31 @@ export default function AppNavigator() {
                 presentation: 'modal',
                 headerShown: true,
                 title: '오늘 기록',
+                headerTintColor: C.primary,
+                headerTitleStyle: { fontWeight: '700', color: C.text },
+                headerStyle: { backgroundColor: '#fff' },
+                headerShadowVisible: false,
+              }}
+            />
+            <Stack.Screen
+              name="FriendProfile"
+              component={FriendProfileScreen}
+              options={{
+                headerShown: true,
+                title: '친구 프로필',
+                headerTintColor: C.primary,
+                headerTitleStyle: { fontWeight: '700', color: C.text },
+                headerStyle: { backgroundColor: '#fff' },
+                headerShadowVisible: false,
+              }}
+            />
+            <Stack.Screen
+              name="SkinShop"
+              component={SkinShopScreen}
+              options={{
+                presentation: 'modal',
+                headerShown: true,
+                title: '스킨 상점',
                 headerTintColor: C.primary,
                 headerTitleStyle: { fontWeight: '700', color: C.text },
                 headerStyle: { backgroundColor: '#fff' },

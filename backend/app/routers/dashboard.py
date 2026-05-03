@@ -24,19 +24,26 @@ def calc_score(water, water_goal, protein, protein_goal,
     """목표별 가중치로 건강 점수 계산"""
     def pct(val, goal): return min(val / goal, 1.0) if goal > 0 else 0
 
-    if goal == "근육 증량":
+    if goal == "muscle_gain":
         score = (
             pct(water, water_goal) * 25 +
             pct(protein, protein_goal) * 35 +
             pct(strength, strength_goal) * 30 +
             pct(cardio, cardio_goal) * 10
         )
-    else:  # 체중 감량
+    elif goal == "weight_loss":
         score = (
             pct(water, water_goal) * 25 +
             pct(protein, protein_goal) * 25 +
             pct(strength, strength_goal) * 15 +
             pct(cardio, cardio_goal) * 35
+        )
+    else:  # health_maintenance
+        score = (
+            pct(water, water_goal) * 25 +
+            pct(protein, protein_goal) * 30 +
+            pct(strength, strength_goal) * 22 +
+            pct(cardio, cardio_goal) * 23
         )
     return round(score)
 

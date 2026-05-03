@@ -13,15 +13,15 @@ class User(Base):
     name = Column(String(100), nullable=False)
 
     # 신체 정보
-    height = Column(Float, default=170.0)
-    weight = Column(Float, default=65.0)
+    height_cm = Column(Float, default=170.0)
+    weight_kg = Column(Float, default=65.0)
     age = Column(Integer, default=25)
-    gender = Column(String(10), default="미설정")  # 남 / 여
+    gender = Column(String(10), default="male")  # male / female
 
     # 목표
-    goal = Column(String(20), default="근육 증량")  # 근육 증량 / 체중 감량
-    water_goal = Column(Integer, default=2000)       # ml
-    protein_goal = Column(Integer, default=60)       # g
+    goal = Column(String(20), default="muscle_gain")  # muscle_gain / weight_loss / health_maintenance
+    water_goal = Column(Integer, default=2000)         # ml
+    protein_goal = Column(Float, default=60.0)         # g (소수점 허용)
     strength_goal = Column(Integer, default=30)      # 분 (근력 운동)
     cardio_goal = Column(Integer, default=30)        # 분 (유산소 운동)
 
@@ -53,7 +53,7 @@ class DailyRecord(Base):
     water_ml = Column(Integer, default=0)
 
     # 단백질
-    protein_g = Column(Integer, default=0)
+    protein_g = Column(Float, default=0.0)  # 소수점 허용 (예: 108.4g)
 
     # 근력 운동
     strength_min = Column(Integer, default=0)
@@ -66,7 +66,7 @@ class DailyRecord(Base):
     cardio_type = Column(String(50), default="")
 
     # 거북이 지급 여부 (하루 1회)
-    turtle_awarded = Column(Integer, default=0)
+    turtle_awarded = Column(Integer, default=0)  # TINYINT(1): 0=미지급, 1=지급
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

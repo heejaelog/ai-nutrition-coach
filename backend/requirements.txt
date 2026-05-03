@@ -12,3 +12,4 @@ cryptography==46.0.7
 numpy==2.4.4
 scikit-learn==1.8.0
 scipy==1.17.1
+openai>=1.0.0

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from app.database import engine, Base, SessionLocal
-from app.routers import auth, users, records, dashboard, analysis, friends, skins
+from app.routers import auth, users, records, dashboard, analysis, friends, skins, chatbot
 from app import models
 
 load_dotenv()
@@ -28,7 +28,7 @@ def seed():
 
 seed()
 
-app = FastAPI(title="AI Nutrition Coach API", version="1.0.0")
+app = FastAPI(title="AI Nutrition Coach API", version="1.0.0", debug=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,6 +45,7 @@ app.include_router(dashboard.router)
 app.include_router(analysis.router)
 app.include_router(friends.router)
 app.include_router(skins.router)
+app.include_router(chatbot.router)
 
 
 @app.get("/")

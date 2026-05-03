@@ -57,8 +57,8 @@ def get_cluster_comparison(db: Session, current_user_id: int) -> dict:
                 "cluster_avg_exercise": 0, "cluster_size": 0, "cluster_label": "데이터 없음"}
 
     # 나의 버킷 기준값
-    my_height_bucket = get_height_bucket(current_user.height or 170)
-    my_weight_bucket = get_weight_bucket(current_user.weight or 65)
+    my_height_bucket = get_height_bucket(current_user.height_cm or 170)
+    my_weight_bucket = get_weight_bucket(current_user.weight_kg or 65)
     my_age_bucket    = get_age_bucket(current_user.age or 25)
     my_gender        = current_user.gender
     my_goal          = current_user.goal
@@ -77,13 +77,16 @@ def get_cluster_comparison(db: Session, current_user_id: int) -> dict:
     # 버킷 범위 내에 있는 사용자만 추출
     group_user_ids = [
         u.id for u in same_group_users
-        if get_height_bucket(u.height or 170) == my_height_bucket
-        and get_weight_bucket(u.weight or 65) == my_weight_bucket
+        if get_height_bucket(u.height_cm or 170) == my_height_bucket
+        and get_weight_bucket(u.weight_kg or 65) == my_weight_bucket
         and get_age_bucket(u.age or 25) == my_age_bucket
     ]
 
+    GENDER_LABEL = {"male": "남", "female": "여"}
+    GOAL_LABEL = {"muscle_gain": "근육증량", "weight_loss": "체중감량", "health_maintenance": "건강유지"}
     cluster_label = (
-        f"{my_gender} · {my_goal} · "
+        f"{GENDER_LABEL.get(my_gender, my_gender)} · "
+        f"{GOAL_LABEL.get(my_goal, my_goal)} · "
         f"키 {my_height_bucket}~{my_height_bucket+4}cm · "
         f"몸무게 {my_weight_bucket}~{my_weight_bucket+4}kg · "
         f"나이 {my_age_bucket}~{my_age_bucket+4}세"

@@ -8,7 +8,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
-    goal: str = "근육 증량"   # 근육 증량 / 체중 감량
+    goal: str = "muscle_gain"   # muscle_gain / weight_loss / health_maintenance
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -25,13 +25,13 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
-    height: float
-    weight: float
+    height_cm: float
+    weight_kg: float
     age: int
     gender: str
     goal: str
     water_goal: int
-    protein_goal: int
+    protein_goal: float
     strength_goal: int
     cardio_goal: int
     turtle_count: int
@@ -43,13 +43,13 @@ class UserResponse(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     name: Optional[str] = None
-    height: Optional[float] = None
-    weight: Optional[float] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     goal: Optional[str] = None
     water_goal: Optional[int] = None
-    protein_goal: Optional[int] = None
+    protein_goal: Optional[float] = None
     strength_goal: Optional[int] = None
     cardio_goal: Optional[int] = None
 
@@ -57,7 +57,7 @@ class UserUpdateRequest(BaseModel):
 # ── Record ────────────────────────────────────────────
 class RecordRequest(BaseModel):
     water_ml: int = 0
-    protein_g: int = 0
+    protein_g: float = 0.0
     strength_min: int = 0
     strength_kcal: int = 0
     strength_type: str = ""
@@ -68,7 +68,7 @@ class RecordRequest(BaseModel):
 class RecordResponse(BaseModel):
     date: date
     water_ml: int
-    protein_g: int
+    protein_g: float
     strength_min: int
     strength_kcal: int
     strength_type: str
@@ -85,8 +85,8 @@ class DashboardResponse(BaseModel):
     date: str
     water: int
     water_goal: int
-    protein: int
-    protein_goal: int
+    protein: float
+    protein_goal: float
     strength_min: int
     strength_goal: int
     cardio_min: int
@@ -100,15 +100,15 @@ class DashboardResponse(BaseModel):
 class WeeklyResponse(BaseModel):
     labels: list[str]
     water: list[int]
-    protein: list[int]
+    protein: list[float]
     strength: list[int]
     cardio: list[int]
     avg_water: int
-    avg_protein: int
+    avg_protein: float
     avg_strength: int
     avg_cardio: int
     global_avg_water: int
-    global_avg_protein: int
+    global_avg_protein: float
     # 시계열 추세
     water_trend: str
     protein_trend: str
@@ -180,3 +180,15 @@ class PendingRequestItem(BaseModel):
 
 
 TokenResponse.model_rebuild()
+
+
+# ── Chatbot ────────────────────────────────────────────
+class ChatMessageRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
+    saved: Optional[dict] = None
+    turtle_gained: bool = False
+    turtle_count: Optional[int] = None
+    report_data: Optional[dict] = None

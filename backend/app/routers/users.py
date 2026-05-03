@@ -44,17 +44,22 @@ def update_me(
 
     # 목표가 변경되면 목표치 자동 재계산 (체중 기반)
     if req.goal is not None:
-        weight = current_user.weight
-        if req.goal == "근육 증량":
+        weight = current_user.weight_kg
+        if req.goal == "muscle_gain":
             current_user.water_goal = int(weight * 40)
-            current_user.protein_goal = int(weight * 2.0)
+            current_user.protein_goal = round(weight * 2.0, 1)
             current_user.strength_goal = 60
             current_user.cardio_goal = 20
-        else:  # 체중 감량
+        elif req.goal == "weight_loss":
             current_user.water_goal = int(weight * 35)
-            current_user.protein_goal = int(weight * 1.4)
+            current_user.protein_goal = round(weight * 1.4, 1)
             current_user.strength_goal = 20
             current_user.cardio_goal = 45
+        else:  # health_maintenance
+            current_user.water_goal = int(weight * 35)
+            current_user.protein_goal = round(weight * 1.2, 1)
+            current_user.strength_goal = 30
+            current_user.cardio_goal = 30
 
     db.commit()
     db.refresh(current_user)

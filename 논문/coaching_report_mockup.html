@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>꼬부기 AI 코치 — 레포트 UI 목업</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #e5e5ea;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 30px 16px;
+    }
+
+    /* ── 폰 프레임 ── */
+    .phone {
+      width: 390px;
+      background: #f2f2f7;
+      border-radius: 44px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.35), inset 0 0 0 2px #c8c8cc;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    /* 상단 노치 */
+    .notch {
+      background: #1a1a1a;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .notch-island {
+      width: 120px;
+      height: 30px;
+      background: #000;
+      border-radius: 20px;
+    }
+
+    /* ── 채팅 헤더 ── */
+    .chat-header {
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px 16px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      background: #2d6a2d;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      padding: 4px;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: contain; }
+    .chat-header-info h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111;
+    }
+    .online-badge {
+      font-size: 11px;
+      color: #34c759;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .online-dot {
+      width: 7px; height: 7px;
+      background: #34c759;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* ── 채팅 본문 ── */
+    .chat-body {
+      height: auto;
+      overflow-y: visible;
+      padding: 14px 12px 20px;
+      background: #f2f2f7;
+    }
+
+    /* 날짜 구분선 */
+    .date-divider {
+      text-align: center;
+      font-size: 11px;
+      color: #888;
+      margin: 8px 0 14px;
+    }
+
+    /* ── 메시지 말풍선 ── */
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .msg-row.me {
+      flex-direction: row-reverse;
+    }
+    .msg-avatar img { width: 100%; height: 100%; object-fit: contain; }
+    .msg-avatar {
+      width: 30px; height: 30px;
+      background: #2d6a2d;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      align-self: flex-end;
+      overflow: hidden;
+      padding: 3px;
+    }
+    .bubble {
+      max-width: 270px;
+      background: #fff;
+      border-radius: 18px 18px 18px 4px;
+      padding: 10px 13px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: #111;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .msg-row.me .bubble {
+      background: #2d6a2d;
+      color: #fff;
+      border-radius: 18px 18px 4px 18px;
+    }
+    .msg-time {
+      font-size: 10px;
+      color: #aaa;
+      align-self: flex-end;
+      flex-shrink: 0;
+    }
+
+    /* ── 레포트 카드 (말풍선 안) ── */
+    .report-card {
+      width: 280px;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      margin-bottom: 8px;
+    }
+    .card-header {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .card-header .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .card-header .card-sub {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+    }
+    .card-body { padding: 10px 14px 12px; }
+
+    /* 종합 점수 카드 */
+    .score-card .card-header { background: #1b5e20; }
+    .score-card .card-title { color: #fff; }
+    .score-card .card-sub { color: #a5d6a7; }
+    .score-ring-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 0 4px;
+    }
+    .score-ring {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: conic-gradient(#4caf50 0% 72%, #e0e0e0 72% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .score-ring::before {
+      content: '';
+      width: 48px; height: 48px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+    }
+    .score-num {
+      position: relative;
+      z-index: 1;
+      font-size: 17px;
+      font-weight: 700;
+      color: #1b5e20;
+    }
+    .score-details { flex: 1; }
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 11.5px;
+    }
+    .score-label { color: #555; width: 54px; }
+    .cluster-tag {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .trend-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+    .trend-up { background: #fff3e0; color: #e65100; }
+    .trend-down { background: #e3f2fd; color: #0277bd; }
+    .trend-hold { background: #f5f5f5; color: #666; }
+
+    /* 항목 카드 공통 */
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 2px;
+    }
+    .item-label { font-size: 11px; color: #555; }
+    .item-val { font-size: 14px; font-weight: 700; color: #111; }
+    .item-val.green { color: #2e7d32; }
+    .item-val.orange { color: #e65100; }
+    .item-val.blue { color: #0277bd; }
+
+    /* 진행 바 */
+    .progress-wrap {
+      background: #f0f0f0;
+      border-radius: 6px;
+      height: 8px;
+      margin: 5px 0 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease;
+    }
+    .fill-blue { background: linear-gradient(90deg, #42a5f5, #1565c0); }
+    .fill-orange { background: linear-gradient(90deg, #ff8a65, #e64a19); }
+    .fill-green { background: linear-gradient(90deg, #66bb6a, #1b5e20); }
+    .fill-yellow { background: linear-gradient(90deg, #ffca28, #f57f17); }
+    .fill-over { background: linear-gradient(90deg, #4caf50, #1b5e20); }
+
+    .pct-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .pct-val { font-weight: 600; }
+    .pct-val.green { color: #2e7d32; }
+    .pct-val.orange { color: #e65100; }
+
+    /* 유사 사용자 비교 */
+    .compare-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-top: 6px;
+    }
+    .compare-me { font-size: 11px; color: #333; }
+    .compare-me span { font-size: 13px; font-weight: 700; color: #111; }
+    .compare-diff {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 10px;
+    }
+    .diff-minus { background: #fce4ec; color: #c62828; }
+    .diff-plus  { background: #e8f5e9; color: #1b5e20; }
+    .compare-avg { font-size: 11px; color: #333; text-align: right; }
+    .compare-avg span { font-size: 13px; font-weight: 700; color: #555; }
+
+    /* 출처 박스 */
+    .source-box {
+      background: #f9fbe7;
+      border-left: 3px solid #aed581;
+      border-radius: 0 6px 6px 0;
+      padding: 6px 8px;
+      margin-top: 8px;
+      font-size: 10px;
+      color: #555;
+      line-height: 1.6;
+    }
+    .source-box .src-title {
+      font-weight: 700;
+      color: #558b2f;
+      margin-bottom: 2px;
+      font-size: 10.5px;
+    }
+
+    /* AI 코치 코멘트 */
+    .coach-comment {
+      background: #e8f5e9;
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      font-size: 11.5px;
+      color: #1b5e20;
+      line-height: 1.6;
+    }
+    .coach-comment::before {
+      content: '💬 ';
+      font-size: 12px;
+    }
+
+    /* 비교 테이블 */
+    .compare-table {
+      width: 100%;
+      font-size: 11px;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    .compare-table th {
+      background: #f5f5f5;
+      padding: 4px 6px;
+      font-weight: 600;
+      color: #555;
+      text-align: center;
+      font-size: 10px;
+    }
+    .compare-table td {
+      padding: 5px 6px;
+      text-align: center;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 11px;
+    }
+    .compare-table td.label-col { text-align: left; color: #444; }
+    .compare-table td.my-col { font-weight: 700; color: #1b5e20; }
+    .compare-table td.diff-col { font-weight: 700; }
+    .diff-neg { color: #c62828; }
+    .diff-pos { color: #1b5e20; }
+
+    /* 액션 플랜 */
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .action-item:last-child { border-bottom: none; }
+    .action-rank {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .rank-1 { background: #ffcdd2; color: #c62828; }
+    .rank-2 { background: #fff9c4; color: #f57f17; }
+    .rank-ok { background: #e8f5e9; color: #1b5e20; }
+    .action-text { flex: 1; }
+    .action-title { font-size: 12px; font-weight: 600; color: #111; }
+    .action-desc { font-size: 10.5px; color: #666; margin-top: 1px; }
+
+    /* 바텀 인풋 */
+    .chat-input {
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1px solid #e0e0e0;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-field {
+      flex: 1;
+      background: #f2f2f7;
+      border-radius: 20px;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: #999;
+      font-family: 'Noto Sans KR', sans-serif;
+      border: none;
+      outline: none;
+    }
+    .send-btn {
+      width: 36px; height: 36px;
+      background: #2d6a2d;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .send-btn svg { width: 16px; height: 16px; fill: #fff; }
+
+    /* ── 레이아웃 ── */
+    .page-wrap {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .label-col-outer {
+      max-width: 260px;
+    }
+    .label-col-outer h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1b5e20;
+      margin-bottom: 8px;
+    }
+    .label-col-outer p {
+      font-size: 13px;
+      color: #444;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .tag {
+      background: #e8f5e9;
+      color: #1b5e20;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- 설명 패널 -->
+  <div class="label-col-outer" style="padding-top:40px;">
+    <h2>꼬부기 AI 코치<br>시각적 레포트 UI</h2>
+    <p>K-Means 클러스터링으로 분류된 행동 유형과 유사 사용자 비교 데이터를 기반으로, 챗봇이 시각적 레포트 카드를 메시지로 전송합니다.</p>
+    <div class="tag-list">
+      <span class="tag">K-Means 클러스터링</span>
+      <span class="tag">유사 사용자 비교</span>
+      <span class="tag">시계열 추세</span>
+      <span class="tag">영양 출처 명시</span>
+      <span class="tag">WHO 가이드라인</span>
+      <span class="tag">한국영양학회 기준</span>
+    </div>
+    <p style="font-size:12px; color:#888;">
+      ↓ 스크롤해서 전체 레포트 확인
+    </p>
+  </div>
+
+  <!-- 폰 목업 -->
+  <div class="phone">
+    <div class="notch"><div class="notch-island"></div></div>
+
+    <!-- 채팅 헤더 -->
+    <div class="chat-header">
+      <div class="avatar"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+      <div class="chat-header-info">
+        <h3>꼬부기 AI 코치</h3>
+        <div class="online-badge"><span class="online-dot"></span> 온라인</div>
+      </div>
+    </div>
+
+    <!-- 채팅 본문 -->
+    <div class="chat-body">
+
+      <div class="date-divider">2026년 4월 27일 (토)</div>
+
+      <!-- 사용자 메시지 -->
+      <div class="msg-row me">
+        <span class="msg-time">오전 9:01</span>
+        <div class="bubble">이번 주 리포트 분석해줘</div>
+      </div>
+
+      <!-- AI 첫 메시지 -->
+      <div class="msg-row" style="margin-top:10px;">
+        <div class="msg-avatar"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="bubble">
+            안녕하세요 신희재님! 🐢<br>
+            이번 주(4/21~4/27) 기록을 분석했어요.<br>
+            아래 리포트를 확인해보세요 📋
+          </div>
+          <div style="font-size:10px;color:#aaa;margin-top:3px;margin-left:4px;">오전 9:01</div>
+        </div>
+      </div>
+
+      <!-- ① 종합 점수 카드 -->
+      <div class="msg-row" style="margin-top:6px; align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card score-card">
+            <div class="card-header">
+              <div class="card-title">📊 이번 주 종합 리포트</div>
+              <div class="card-sub">2026.04.21 ~ 04.27</div>
+            </div>
+            <div class="card-body">
+              <div class="score-ring-row">
+                <div class="score-ring">
+                  <span class="score-num">72</span>
+                </div>
+                <div class="score-details">
+                  <div class="score-row">
+                    <span class="score-label">행동 유형</span>
+                    <span class="cluster-tag">🏋️ 근력 집중형</span>
+                  </div>
+                  <div class="score-row">
+                    <span class="score-label">단백질</span>
+                    <span class="trend-tag trend-up">↑ 증가</span>
+                  </div>
+                  <div class="score-row">
+                    <span class="score-label">수분</span>
+                    <span class="trend-tag trend-down">↓ 감소</span>
+                  </div>
+                  <div class="score-row">
+                    <span class="score-label">운동</span>
+                    <span class="trend-tag trend-hold">→ 유지</span>
+                  </div>
+                </div>
+              </div>
+              <div class="source-box">
+                <div class="src-title">📌 점수 산출 기준</div>
+                수분 33% + 단백질 33% + 운동 34% 가중합산<br>
+                목표 대비 달성률 기반 (최대 100점)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 수분 카드 -->
+      <div class="msg-row" style="align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card">
+            <div class="card-header">
+              <div class="card-title">💧 수분 섭취</div>
+              <div class="card-sub">이번 주 일평균</div>
+            </div>
+            <div class="card-body">
+              <div class="item-row">
+                <span class="item-label">나의 평균</span>
+                <span class="item-val orange">1,500 ml</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-fill fill-blue" style="width:65%"></div>
+              </div>
+              <div class="pct-row">
+                <span>목표 2,300ml 대비</span>
+                <span class="pct-val orange">65%</span>
+              </div>
+              <div class="compare-row">
+                <div class="compare-me">나<br><span>1,500ml</span></div>
+                <div class="compare-diff diff-minus">▼ -365ml</div>
+                <div class="compare-avg">그룹 평균<br><span>1,865ml</span></div>
+              </div>
+              <div class="source-box">
+                <div class="src-title">📌 권장 기준</div>
+                성인 남성 하루 수분 권장량 <b>2.6L</b><br>
+                출처: 한국영양학회,<br>
+                「한국인 영양소 섭취기준(KDRIs)」, 2020
+              </div>
+              <div class="coach-comment">
+                근력 운동 중 수분이 빠르게 소실됩니다. 운동 전 300ml, 운동 중 200ml 추가를 권장해요.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 단백질 카드 -->
+      <div class="msg-row" style="align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card">
+            <div class="card-header">
+              <div class="card-title">🥩 단백질 섭취</div>
+              <div class="card-sub">이번 주 일평균 · 추세 ↑ 증가</div>
+            </div>
+            <div class="card-body">
+              <div class="item-row">
+                <span class="item-label">나의 평균</span>
+                <span class="item-val green">95 g</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-fill fill-over" style="width:100%"></div>
+              </div>
+              <div class="pct-row">
+                <span>목표 91g 대비</span>
+                <span class="pct-val green">104% ✅</span>
+              </div>
+              <div class="compare-row">
+                <div class="compare-me">나<br><span>95g</span></div>
+                <div class="compare-diff diff-plus">▲ +7g</div>
+                <div class="compare-avg">그룹 평균<br><span>88g</span></div>
+              </div>
+              <div class="source-box">
+                <div class="src-title">📌 권장 기준</div>
+                근육증량 목표: 체중 1kg당 <b>1.2~1.7g</b><br>
+                신희재님(72kg) 기준 → <b>86~122g</b><br>
+                출처: 보건복지부,<br>
+                「한국인을 위한 식생활 지침」, 2021
+              </div>
+              <div class="coach-comment">
+                단백질 섭취 훌륭해요! 👍 목표와 그룹 평균 모두 상회 중입니다. 이 패턴을 유지하세요.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ 운동 카드 -->
+      <div class="msg-row" style="align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card">
+            <div class="card-header">
+              <div class="card-title">💪 운동량</div>
+              <div class="card-sub">근력 / 유산소 분리 분석</div>
+            </div>
+            <div class="card-body">
+              <!-- 근력 -->
+              <div class="item-row" style="margin-bottom:2px;">
+                <span class="item-label">🏋️ 근력 운동</span>
+                <span class="item-val green">55분</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-fill fill-green" style="width:100%"></div>
+              </div>
+              <div class="pct-row">
+                <span>목표 20분 대비</span>
+                <span class="pct-val green">275% ✅</span>
+              </div>
+              <!-- 유산소 -->
+              <div class="item-row" style="margin-top:8px;margin-bottom:2px;">
+                <span class="item-label">🚴 유산소 운동</span>
+                <span class="item-val orange">10분</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-fill fill-yellow" style="width:22%"></div>
+              </div>
+              <div class="pct-row">
+                <span>목표 45분 대비</span>
+                <span class="pct-val orange">22% ⚠️</span>
+              </div>
+              <div class="source-box">
+                <div class="src-title">📌 권장 기준</div>
+                유산소: 주 <b>150분 이상</b> 중강도 운동<br>
+                출처: WHO, 「Global Action Plan on<br>
+                Physical Activity」, 2020<br>
+                보건복지부·한국스포츠정책과학원,<br>
+                「한국인을 위한 신체활동 지침서」, 2023
+              </div>
+              <div class="coach-comment">
+                근력은 완벽해요! 유산소가 부족합니다. 주 3회 걷기 20분을 추가하면 심폐 지구력과 근력 회복에 도움이 됩니다.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 유사 사용자 비교 카드 -->
+      <div class="msg-row" style="align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card">
+            <div class="card-header">
+              <div class="card-title">👥 유사 사용자 비교</div>
+              <div class="card-sub">남 · 근육증량 · 170~174cm · 70~74kg · 25~29세 (3명)</div>
+            </div>
+            <div class="card-body">
+              <table class="compare-table">
+                <thead>
+                  <tr>
+                    <th>항목</th>
+                    <th>나</th>
+                    <th>차이</th>
+                    <th>그룹 평균</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="label-col">💧 수분</td>
+                    <td class="my-col">1,500ml</td>
+                    <td class="diff-col diff-neg">▼-365</td>
+                    <td>1,865ml</td>
+                  </tr>
+                  <tr>
+                    <td class="label-col">🥩 단백질</td>
+                    <td class="my-col">95g</td>
+                    <td class="diff-col diff-pos">▲+7</td>
+                    <td>88g</td>
+                  </tr>
+                  <tr>
+                    <td class="label-col">🏋️ 근력</td>
+                    <td class="my-col">55분</td>
+                    <td class="diff-col diff-pos">▲+5</td>
+                    <td>50분</td>
+                  </tr>
+                  <tr>
+                    <td class="label-col">🚴 유산소</td>
+                    <td class="my-col">10분</td>
+                    <td class="diff-col diff-neg">▼-5</td>
+                    <td>15분</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="source-box" style="margin-top:8px;">
+                <div class="src-title">📌 분류 방식</div>
+                K-Means 클러스터링 (K=4) 기반 행동 유형 분류<br>
+                출처: MacQueen (1967), scikit-learn KMeans<br>
+                신체조건 매칭: 키±2cm, 몸무게±2kg, 나이±2세
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑥ 액션 플랜 카드 -->
+      <div class="msg-row" style="align-items:flex-start;">
+        <div class="msg-avatar" style="visibility:hidden;"></div>
+        <div>
+          <div class="report-card">
+            <div class="card-header">
+              <div class="card-title">🎯 이번 주 액션 플랜</div>
+              <div class="card-sub">우선순위 기반 개선 제안</div>
+            </div>
+            <div class="card-body">
+              <div class="action-item">
+                <div class="action-rank rank-1">1</div>
+                <div class="action-text">
+                  <div class="action-title">💧 수분 +800ml 추가</div>
+                  <div class="action-desc">운동 전 300ml + 식간 물 2잔 습관화</div>
+                </div>
+              </div>
+              <div class="action-item">
+                <div class="action-rank rank-2">2</div>
+                <div class="action-text">
+                  <div class="action-title">🚴 유산소 주 3회 추가</div>
+                  <div class="action-desc">회당 20분 걷기 또는 가벼운 조깅</div>
+                </div>
+              </div>
+              <div class="action-item">
+                <div class="action-rank rank-ok">✓</div>
+                <div class="action-text">
+                  <div class="action-title">🥩 단백질 현 수준 유지</div>
+                  <div class="action-desc">목표 달성 중 — 이 패턴 유지</div>
+                </div>
+              </div>
+              <div class="source-box" style="margin-top:8px;">
+                <div class="src-title">📚 영양 정보 출처</div>
+                · 한국영양학회, 한국인 영양소 섭취기준 2020<br>
+                · 보건복지부, 한국인을 위한 식생활 지침 2021<br>
+                · WHO, Physical Activity Guidelines 2020<br>
+                · 식품의약품안전처 식품영양성분 DB
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:#aaa;margin-top:3px;margin-left:4px;">오전 9:02</div>
+        </div>
+      </div>
+
+      <!-- 마지막 AI 멘트 -->
+      <div class="msg-row" style="margin-top:4px;">
+        <div class="msg-avatar"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="bubble">
+            궁금한 점이 있으면 언제든 물어보세요! 다음 주에도 꾸준히 기록하면 더 정확한 분석이 가능해요 🌱
+          </div>
+          <div style="font-size:10px;color:#aaa;margin-top:3px;margin-left:4px;">오전 9:02</div>
+        </div>
+      </div>
+
+    </div><!-- /chat-body -->
+
+    <!-- 입력창 -->
+    <div class="chat-input">
+      <input class="input-field" placeholder="코치에게 물어보세요..." readonly>
+      <div class="send-btn">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </div>
+    </div>
+
+  </div><!-- /phone -->
+</div>
+
+</body>
+</html>

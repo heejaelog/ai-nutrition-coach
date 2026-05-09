@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>꼬부기 AI 코치 — 대화형 기록 UI</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #1a1a2e;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    /* ── 폰 공통 ── */
+    .phone {
+      width: 360px;
+      background: #f2f2f7;
+      border-radius: 44px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5), inset 0 0 0 2px #444;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .notch {
+      background: #111;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notch-island {
+      width: 110px; height: 28px;
+      background: #000;
+      border-radius: 20px;
+    }
+
+    /* ── 헤더 ── */
+    .chat-header {
+      background: #1b5e20;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hd-avatar {
+      width: 38px; height: 38px;
+      background: #fff;
+      border-radius: 50%;
+      overflow: hidden;
+      padding: 3px;
+      flex-shrink: 0;
+    }
+    .hd-avatar img { width:100%; object-fit:contain; }
+    .hd-info h3 { font-size:14px; font-weight:700; color:#fff; }
+    .hd-info p  { font-size:10px; color:#a5d6a7; display:flex; align-items:center; gap:3px; }
+    .online-dot { width:6px; height:6px; background:#69f0ae; border-radius:50%; display:inline-block; }
+
+    /* ── 채팅 바디 ── */
+    .chat-body {
+      background: #ececf1;
+      padding: 14px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 620px;
+    }
+
+    /* 날짜 구분 */
+    .date-bar {
+      text-align:center;
+      font-size:10px;
+      color:#888;
+      margin: 4px 0 8px;
+    }
+
+    /* ── 말풍선 공통 ── */
+    .row { display:flex; align-items:flex-end; gap:6px; margin-bottom:2px; }
+    .row.me { flex-direction:row-reverse; }
+
+    .av {
+      width:28px; height:28px;
+      background:#1b5e20;
+      border-radius:50%;
+      overflow:hidden; padding:3px;
+      flex-shrink:0; align-self:flex-end;
+    }
+    .av img { width:100%; object-fit:contain; }
+    .av.hide { visibility:hidden; }
+
+    .bub {
+      max-width:248px;
+      background:#fff;
+      border-radius:18px 18px 18px 4px;
+      padding:9px 12px;
+      font-size:13px;
+      line-height:1.55;
+      color:#111;
+      box-shadow:0 1px 3px rgba(0,0,0,0.08);
+    }
+    .row.me .bub {
+      background:#1b5e20;
+      color:#fff;
+      border-radius:18px 18px 4px 18px;
+    }
+    .ts {
+      font-size:9.5px; color:#aaa;
+      align-self:flex-end; flex-shrink:0;
+    }
+
+    /* ── 저장 확인 카드 ── */
+    .save-card {
+      background:#fff;
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 2px 10px rgba(0,0,0,0.1);
+      max-width:248px;
+      margin-top:2px;
+    }
+    .save-card .sc-head {
+      background:#e8f5e9;
+      padding:8px 12px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:11.5px;
+      font-weight:700;
+      color:#1b5e20;
+    }
+    .save-card .sc-body { padding:8px 12px; }
+    .save-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:4px 0;
+      border-bottom:1px solid #f5f5f5;
+      font-size:11.5px;
+    }
+    .save-row:last-child { border-bottom:none; }
+    .save-row .lbl { color:#555; }
+    .save-row .val { font-weight:700; color:#1b5e20; }
+    .save-row .val.orange { color:#e65100; }
+
+    /* 진행바 미니 */
+    .mini-bar-wrap {
+      background:#f0f0f0;
+      border-radius:4px;
+      height:5px;
+      margin-top:2px;
+      overflow:hidden;
+      flex:1;
+      margin-left:8px;
+    }
+    .mini-bar { height:100%; border-radius:4px; }
+    .bar-green { background:#4caf50; }
+    .bar-blue  { background:#42a5f5; }
+    .bar-orange{ background:#ff7043; }
+
+    /* ── 분석 트리거 카드 ── */
+    .analysis-card {
+      background:#fff;
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 2px 10px rgba(0,0,0,0.1);
+      max-width:248px;
+      margin-top:2px;
+    }
+    .ac-head {
+      background:#1b5e20;
+      padding:8px 12px;
+      font-size:11.5px;
+      font-weight:700;
+      color:#fff;
+    }
+    .ac-body { padding:8px 12px; }
+    .ac-row {
+      display:flex;
+      justify-content:space-between;
+      font-size:11px;
+      padding:3px 0;
+      border-bottom:1px solid #f5f5f5;
+      color:#333;
+    }
+    .ac-row:last-child { border-bottom:none; }
+    .ac-row .positive { color:#1b5e20; font-weight:700; }
+    .ac-row .negative { color:#c62828; font-weight:700; }
+
+    /* 퀵 버튼 */
+    .quick-btns {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      padding: 8px 12px 0;
+    }
+    .qb {
+      background:#e8f5e9;
+      border:1px solid #a5d6a7;
+      border-radius:14px;
+      padding:5px 10px;
+      font-size:11px;
+      color:#1b5e20;
+      font-weight:500;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    /* ── 입력창 ── */
+    .chat-input {
+      background:#fff;
+      border-top:1px solid #ddd;
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .inp {
+      flex:1;
+      background:#f2f2f7;
+      border-radius:20px;
+      padding:8px 14px;
+      font-size:12.5px;
+      color:#555;
+      font-family:'Noto Sans KR',sans-serif;
+      border:none;
+      outline:none;
+    }
+    .send {
+      width:34px; height:34px;
+      background:#1b5e20;
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .send svg { width:15px; height:15px; fill:#fff; }
+
+    /* ── 제목 라벨 ── */
+    .phone-label {
+      text-align:center;
+      color:#fff;
+      font-size:13px;
+      font-weight:600;
+      margin-bottom:10px;
+      opacity:0.8;
+    }
+
+    /* Function calling 흐름 설명 */
+    .flow-box {
+      background:#0d1b2a;
+      border:1px solid #1e3a5f;
+      border-radius:16px;
+      padding:24px;
+      width:300px;
+      flex-shrink:0;
+      align-self:flex-start;
+      margin-top:50px;
+    }
+    .flow-box h3 {
+      font-size:14px;
+      font-weight:700;
+      color:#64b5f6;
+      margin-bottom:16px;
+    }
+    .flow-step-box {
+      background:#111d2b;
+      border-radius:10px;
+      padding:10px 14px;
+      margin-bottom:8px;
+      border-left:3px solid #1565c0;
+    }
+    .flow-step-box.green { border-left-color:#2e7d32; }
+    .flow-step-box.orange { border-left-color:#e65100; }
+    .flow-step-box.purple { border-left-color:#6a1b9a; }
+    .flow-step-box h4 {
+      font-size:10.5px;
+      font-weight:700;
+      color:#90caf9;
+      margin-bottom:4px;
+    }
+    .flow-step-box.green h4 { color:#a5d6a7; }
+    .flow-step-box.orange h4 { color:#ffcc80; }
+    .flow-step-box.purple h4 { color:#ce93d8; }
+    .flow-step-box p {
+      font-size:10px;
+      color:#7a9ab8;
+      line-height:1.5;
+    }
+    .flow-arrow-down {
+      text-align:center;
+      color:#3a5a7a;
+      font-size:16px;
+      margin:2px 0;
+    }
+    .flow-box .note {
+      background:#0a1520;
+      border-radius:8px;
+      padding:8px 10px;
+      font-size:9.5px;
+      color:#5a8aaa;
+      margin-top:10px;
+      line-height:1.6;
+    }
+    .flow-box .note b { color:#64b5f6; }
+  </style>
+</head>
+<body>
+
+<!-- ── 폰 1: 식단 기록 ── -->
+<div>
+  <div class="phone-label">📱 식단 · 운동 자연어 기록</div>
+  <div class="phone">
+    <div class="notch"><div class="notch-island"></div></div>
+
+    <div class="chat-header">
+      <div class="hd-avatar">
+        <img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기">
+      </div>
+      <div class="hd-info">
+        <h3>꼬부기 AI 코치</h3>
+        <p><span class="online-dot"></span> 기록하기 · 코칭받기</p>
+      </div>
+    </div>
+
+    <div class="chat-body">
+      <div class="date-bar">2026년 4월 27일 (토)</div>
+
+      <!-- AI 첫 인사 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="bub">
+            안녕하세요! 🐢 오늘 먹은 음식이나 운동을 편하게 말해주세요. 바로 기록해드릴게요!
+          </div>
+        </div>
+        <span class="ts">오전 8:30</span>
+      </div>
+
+      <!-- 퀵 버튼 -->
+      <div class="row">
+        <div class="av hide"></div>
+        <div class="quick-btns">
+          <span class="qb">💧 물 마셨어</span>
+          <span class="qb">🥩 단백질 기록</span>
+          <span class="qb">🏋️ 운동 기록</span>
+          <span class="qb">📊 오늘 현황</span>
+        </div>
+      </div>
+
+      <!-- 사용자: 닭가슴살 -->
+      <div class="row me" style="margin-top:10px;">
+        <span class="ts">오전 9:12</span>
+        <div class="bub">오늘 닭가슴살 200g이랑 두부 100g 먹었어</div>
+      </div>
+
+      <!-- AI: 저장 확인 카드 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="save-card">
+            <div class="sc-head">✅ 단백질 기록 완료</div>
+            <div class="sc-body">
+              <div class="save-row">
+                <span class="lbl">🍗 닭가슴살 200g</span>
+                <span class="val">+46.0g</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">🫘 두부 100g</span>
+                <span class="val">+8.5g</span>
+              </div>
+              <div class="save-row" style="border-top:1.5px solid #e0e0e0; padding-top:6px; margin-top:2px;">
+                <span class="lbl" style="font-weight:600;">합계 단백질</span>
+                <span class="val" style="font-size:13px;">54.5g</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">오늘 목표</span>
+                <span style="font-size:11px; color:#555;">91g 중 <b style="color:#1b5e20;">54.5g</b></span>
+              </div>
+              <div style="display:flex; align-items:center; padding:4px 0;">
+                <span style="font-size:10px; color:#888;">달성률 60%</span>
+                <div class="mini-bar-wrap">
+                  <div class="mini-bar bar-green" style="width:60%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오전 9:12</span>
+      </div>
+
+      <!-- AI 코멘트 -->
+      <div class="row">
+        <div class="av hide"></div>
+        <div class="bub">
+          단백질 54.5g 저장했어요! 목표까지 <b>36.5g</b> 남았어요. 저녁에 계란 3개(18g) + 그릭요거트(10g) 추가하면 좋을 것 같아요 💪
+        </div>
+        <span class="ts">오전 9:12</span>
+      </div>
+
+      <!-- 사용자: 물 -->
+      <div class="row me" style="margin-top:8px;">
+        <span class="ts">오전 10:45</span>
+        <div class="bub">물 500ml 마셨어</div>
+      </div>
+
+      <!-- AI: 물 저장 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="save-card">
+            <div class="sc-head" style="background:#e3f2fd; color:#0d47a1;">💧 수분 기록 완료</div>
+            <div class="sc-body">
+              <div class="save-row">
+                <span class="lbl">추가된 수분</span>
+                <span class="val" style="color:#0d47a1;">+500ml</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">오늘 누적</span>
+                <span style="font-size:11px; color:#555;">2,300ml 중 <b style="color:#0d47a1;">1,000ml</b></span>
+              </div>
+              <div style="display:flex; align-items:center; padding:4px 0;">
+                <span style="font-size:10px; color:#888;">달성률 43%</span>
+                <div class="mini-bar-wrap">
+                  <div class="mini-bar bar-blue" style="width:43%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오전 10:45</span>
+      </div>
+
+      <!-- 사용자: 헬스 -->
+      <div class="row me" style="margin-top:8px;">
+        <span class="ts">오후 2:30</span>
+        <div class="bub">헬스장에서 웨이트 1시간 했어</div>
+      </div>
+
+      <!-- AI: 운동 저장 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="save-card">
+            <div class="sc-head" style="background:#fce4ec; color:#880e4f;">🏋️ 근력 운동 기록 완료</div>
+            <div class="sc-body">
+              <div class="save-row">
+                <span class="lbl">운동 종류</span>
+                <span class="val" style="color:#880e4f;">웨이트 트레이닝</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">운동 시간</span>
+                <span class="val" style="color:#880e4f;">60분</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">오늘 목표</span>
+                <span style="font-size:11px; color:#555;">20분 중 <b style="color:#880e4f;">60분</b> ✅</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:4px 0;">
+                <span style="font-size:10px; color:#888;">달성률 100%+</span>
+                <div class="mini-bar-wrap">
+                  <div class="mini-bar bar-orange" style="width:100%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오후 2:30</span>
+      </div>
+
+      <div class="row">
+        <div class="av hide"></div>
+        <div class="bub">
+          운동 목표 달성! 🎉 거북이 코인 1개 획득했어요. 오늘 정말 잘 하고 있어요!
+        </div>
+        <span class="ts">오후 2:30</span>
+      </div>
+
+    </div>
+
+    <div class="chat-input">
+      <input class="inp" placeholder="오늘 먹은 음식이나 운동을 입력하세요..." readonly>
+      <div class="send">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 폰 2: 오늘 현황 조회 ── -->
+<div>
+  <div class="phone-label">📱 오늘 현황 요청 · AI 코칭</div>
+  <div class="phone">
+    <div class="notch"><div class="notch-island"></div></div>
+
+    <div class="chat-header">
+      <div class="hd-avatar">
+        <img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기">
+      </div>
+      <div class="hd-info">
+        <h3>꼬부기 AI 코치</h3>
+        <p><span class="online-dot"></span> 기록하기 · 코칭받기</p>
+      </div>
+    </div>
+
+    <div class="chat-body">
+      <div class="date-bar">2026년 4월 27일 (토)</div>
+
+      <!-- 사용자: 현황 조회 -->
+      <div class="row me" style="margin-top:8px;">
+        <span class="ts">오후 6:00</span>
+        <div class="bub">오늘 내 기록 어때?</div>
+      </div>
+
+      <!-- AI: 오늘 현황 카드 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="analysis-card">
+            <div class="ac-head">📊 오늘 기록 현황 (4/27)</div>
+            <div class="ac-body">
+              <div class="ac-row">
+                <span>💧 수분</span>
+                <span>1,000 / 2,300ml</span>
+                <span class="negative">43%</span>
+              </div>
+              <div class="ac-row">
+                <span>🥩 단백질</span>
+                <span>54.5 / 91g</span>
+                <span class="negative">60%</span>
+              </div>
+              <div class="ac-row">
+                <span>🏋️ 근력</span>
+                <span>60 / 20분</span>
+                <span class="positive">100% ✅</span>
+              </div>
+              <div class="ac-row">
+                <span>🚴 유산소</span>
+                <span>0 / 45분</span>
+                <span class="negative">0%</span>
+              </div>
+              <div class="ac-row" style="margin-top:4px; border-top:1.5px solid #eee; padding-top:6px;">
+                <span style="font-weight:600;">종합 점수</span>
+                <span></span>
+                <span style="font-weight:700; font-size:13px; color:#1b5e20;">52점</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오후 6:00</span>
+      </div>
+
+      <!-- AI 코칭 멘트 -->
+      <div class="row">
+        <div class="av hide"></div>
+        <div class="bub">
+          근력 운동은 완벽해요! 💪<br><br>
+          저녁까지 남은 목표를 채워봐요:<br>
+          💧 수분 <b>+1,300ml</b> 필요해요<br>
+          🥩 단백질 <b>+36.5g</b> 남았어요<br>
+          🚴 유산소 <b>45분</b> 미달성이에요
+        </div>
+        <span class="ts">오후 6:01</span>
+      </div>
+
+      <!-- 사용자: 뭐 먹을까 -->
+      <div class="row me" style="margin-top:8px;">
+        <span class="ts">오후 6:02</span>
+        <div class="bub">단백질 채우려면 뭐 먹는 게 좋아?</div>
+      </div>
+
+      <!-- AI 추천 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="save-card">
+            <div class="sc-head" style="background:#fff8e1; color:#e65100;">🍽️ 단백질 +36.5g 채우기</div>
+            <div class="sc-body">
+              <div class="save-row">
+                <span class="lbl">계란 3개</span>
+                <span class="val">+18.0g</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">그릭요거트 1개</span>
+                <span class="val">+10.0g</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">저지방 우유 200ml</span>
+                <span class="val">+6.6g</span>
+              </div>
+              <div class="save-row" style="border-top:1.5px solid #e0e0e0; padding-top:6px;">
+                <span class="lbl">합계</span>
+                <span class="val">+34.6g ≈ 목표 달성</span>
+              </div>
+              <div style="font-size:9.5px; color:#888; margin-top:6px; line-height:1.5;">
+                📌 출처: 식품의약품안전처<br>식품영양성분 DB
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오후 6:02</span>
+      </div>
+
+      <!-- 사용자: 기록 -->
+      <div class="row me" style="margin-top:8px;">
+        <span class="ts">오후 8:50</span>
+        <div class="bub">계란 3개랑 그릭요거트 먹었어. 달리기도 30분 했어</div>
+      </div>
+
+      <!-- AI 복합 저장 -->
+      <div class="row">
+        <div class="av"><img src="../화면&이미지/꼬부기-removebg-preview.png" alt="꼬부기"></div>
+        <div>
+          <div class="save-card">
+            <div class="sc-head">✅ 기록 완료 (2가지)</div>
+            <div class="sc-body">
+              <div class="save-row">
+                <span class="lbl">🥩 단백질 추가</span>
+                <span class="val">+28.0g</span>
+              </div>
+              <div class="save-row">
+                <span class="lbl">🚴 유산소 추가</span>
+                <span class="val orange">+30분</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="ts">오후 8:51</span>
+      </div>
+
+      <div class="row">
+        <div class="av hide"></div>
+        <div class="bub">
+          오늘 하루 정말 잘 했어요! 🎉<br>
+          단백질 82.5g · 유산소 30분 달성!<br>
+          내일도 이 패턴 유지해봐요 🌱
+        </div>
+        <span class="ts">오후 8:51</span>
+      </div>
+
+    </div>
+
+    <div class="chat-input">
+      <input class="inp" placeholder="오늘 먹은 음식이나 운동을 입력하세요..." readonly>
+      <div class="send">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Function Calling 흐름 설명 ── -->
+<div class="flow-box">
+  <h3>⚡ Function Calling 동작 구조</h3>
+
+  <div class="flow-step-box">
+    <h4>① 사용자 자연어 입력</h4>
+    <p>"닭가슴살 200g이랑 두부 100g 먹었어"</p>
+  </div>
+  <div class="flow-arrow-down">▼</div>
+
+  <div class="flow-step-box purple">
+    <h4>② LLM 의도 분석</h4>
+    <p>음식명 · 중량 추출<br>
+    식품 DB에서 영양성분 조회<br>
+    → protein_g = 54.5 결정</p>
+  </div>
+  <div class="flow-arrow-down">▼</div>
+
+  <div class="flow-step-box orange">
+    <h4>③ Function Calling 발동</h4>
+    <p>save_daily_record(<br>
+    &nbsp;&nbsp;protein_g = 54.5<br>
+    ) 함수 자동 호출</p>
+  </div>
+  <div class="flow-arrow-down">▼</div>
+
+  <div class="flow-step-box green">
+    <h4>④ DB 저장</h4>
+    <p>daily_records 테이블<br>
+    protein_g 업데이트 (누적합산)</p>
+  </div>
+  <div class="flow-arrow-down">▼</div>
+
+  <div class="flow-step-box">
+    <h4>⑤ 응답 생성</h4>
+    <p>저장 확인 카드 + 잔여 목표 + 맞춤 조언 메시지 반환</p>
+  </div>
+
+  <div class="note">
+    <b>지원 입력 유형</b><br>
+    💧 "물 500ml 마셨어" → water_ml<br>
+    🥩 "닭가슴살 200g" → protein_g<br>
+    🏋️ "헬스 1시간" → strength_min<br>
+    🚴 "달리기 30분" → cardio_min<br>
+    🍽️ 복합: 음식 + 운동 동시 처리<br><br>
+    <b>영양정보 출처</b><br>
+    식품의약품안전처 식품영양성분 DB<br>
+    Open API 연동
+  </div>
+</div>
+
+</body>
+</html>

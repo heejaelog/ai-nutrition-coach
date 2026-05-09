@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>추세 분석 화면</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: -apple-system, 'Noto Sans KR', sans-serif;
+  }
+
+  .phone {
+    width: 360px;
+    background: #fff;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    border: 8px solid #1a1a1a;
+  }
+
+  /* 헤더 */
+  .header {
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+    padding: 28px 22px 26px;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-title { color: #fff; font-size: 22px; font-weight: 800; }
+  .header-sub { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 2px; }
+  .period-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .period-btn {
+    padding: 5px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+  }
+  .period-btn.active {
+    background: #fff;
+    color: #2E7D32;
+  }
+
+  /* 바디 */
+  .body { background: #F5F7FA; padding: 16px; }
+
+  /* 요약 칩 */
+  .chip-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .chip {
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .chip-icon { font-size: 16px; }
+  .chip-value { font-size: 20px; font-weight: 800; }
+  .chip-value span { font-size: 11px; font-weight: 500; margin-left: 1px; }
+  .chip-label { font-size: 11px; color: #64748B; }
+  .chip-trend {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .trend-up   { color: #16A34A; }
+  .trend-down { color: #DC2626; }
+  .trend-keep { color: #94A3B8; }
+
+  /* 차트 카드 */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card-title { font-size: 15px; font-weight: 700; color: #1E293B; margin-bottom: 10px; }
+
+  /* 탭 */
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #F1F5F9;
+    color: #64748B;
+  }
+  .tab.active {
+    background: #4CAF50;
+    color: #fff;
+  }
+
+  /* 차트 */
+  .chart-area {
+    position: relative;
+    height: 120px;
+    margin: 0 -4px;
+  }
+  svg.line-chart { width: 100%; height: 100%; }
+
+  /* 범례 */
+  .legend-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #64748B; }
+  .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-note { font-size: 10px; color: #94A3B8; margin-top: 6px; }
+
+  /* 추세 바 섹션 */
+  .trend-section { margin-top: 4px; }
+  .trend-row-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #F1F5F9;
+  }
+  .trend-row-item:last-child { border-bottom: none; }
+  .trend-left  { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; font-weight: 500; }
+  .trend-dot-sm{ width: 8px; height: 8px; border-radius: 50%; }
+  .trend-right { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title">리포트</div>
+        <div class="header-sub">일요일 – 토요일</div>
+      </div>
+      <div class="period-toggle">
+        <div class="period-btn active">주간</div>
+        <div class="period-btn">월간</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- 요약 칩 -->
+    <div class="chip-row">
+      <div class="chip" style="background:#EFF6FF;">
+        <span class="chip-icon">💧</span>
+        <div class="chip-value" style="color:#2563EB;">1,840<span>ml</span></div>
+        <div class="chip-label">수분 평균</div>
+        <div class="chip-trend trend-up">▲ 증가</div>
+      </div>
+      <div class="chip" style="background:#FFF7ED;">
+        <span class="chip-icon">🥩</span>
+        <div class="chip-value" style="color:#EA580C;">62.4<span>g</span></div>
+        <div class="chip-label">단백질 평균</div>
+        <div class="chip-trend trend-up">▲ 증가</div>
+      </div>
+      <div class="chip" style="background:#F0FDF4;">
+        <span class="chip-icon">🏋️</span>
+        <div class="chip-value" style="color:#16A34A;">48<span>분</span></div>
+        <div class="chip-label">근력 평균</div>
+        <div class="chip-trend trend-keep">— 유지</div>
+      </div>
+      <div class="chip" style="background:#FFFBEB;">
+        <span class="chip-icon">🚴</span>
+        <div class="chip-value" style="color:#D97706;">32<span>분</span></div>
+        <div class="chip-label">유산소 평균</div>
+        <div class="chip-trend trend-down">▼ 감소</div>
+      </div>
+    </div>
+
+    <!-- 차트 카드 -->
+    <div class="card">
+      <div class="card-title">나의 섭취 패턴</div>
+      <div class="tab-row">
+        <div class="tab active">통합</div>
+        <div class="tab">수분</div>
+        <div class="tab">단백질</div>
+        <div class="tab">근력</div>
+        <div class="tab">유산소</div>
+      </div>
+
+      <div class="chart-area">
+        <svg class="line-chart" viewBox="0 0 310 110" preserveAspectRatio="none">
+          <!-- 배경 격자 -->
+          <line x1="0" y1="27" x2="310" y2="27" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4"/>
+          <line x1="0" y1="55" x2="310" y2="55" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4"/>
+          <line x1="0" y1="83" x2="310" y2="83" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4"/>
+
+          <!-- 수분 라인 (파랑) -->
+          <polyline points="10,72 55,58 100,45 145,50 190,38 235,30 280,22"
+            fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- 단백질 라인 (주황) -->
+          <polyline points="10,65 55,60 100,55 145,48 190,52 235,44 280,40"
+            fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- 근력 라인 (초록) -->
+          <polyline points="10,50 55,48 100,52 145,50 190,47 235,50 280,48"
+            fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- 유산소 라인 (노랑) -->
+          <polyline points="10,40 55,45 100,50 145,58 190,62 235,65 280,70"
+            fill="none" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- X축 라벨 -->
+          <text x="10"  y="105" font-size="9" fill="#94A3B8" text-anchor="middle">일</text>
+          <text x="55"  y="105" font-size="9" fill="#94A3B8" text-anchor="middle">월</text>
+          <text x="100" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">화</text>
+          <text x="145" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">수</text>
+          <text x="190" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">목</text>
+          <text x="235" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">금</text>
+          <text x="280" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">토</text>
+        </svg>
+      </div>
+
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#2563EB"></div>수분</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EA580C"></div>단백질</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>근력</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>유산소</div>
+      </div>
+      <div class="legend-note">* Y축: 목표 달성률 (%)</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -265,9 +265,9 @@ def _build_system_prompt(user: models.User) -> str:
 예) "근력 운동은 완벽해요! 💪 저녁까지 수분과 단백질을 조금 더 채워봐요."
 
 [get_coaching_advice 호출 후 출력 형식]
-데이터를 보고 친근한 말투로 3~5문장 이내 텍스트 코칭을 해주세요.
-- 잘 된 항목은 칭찬, 부족한 항목은 구체적인 개선 팁 제시
-- 수치(ml, g, 분)를 직접 언급해도 됩니다
+리포트 카드가 자동으로 표시됩니다. 수치는 카드에서 확인되므로 반복하지 말고,
+잘 된 항목 칭찬 + 부족한 항목 구체적 개선 팁을 친근한 말투로 3~5문장만 답하세요.
+예) "이번 주 수분 섭취가 아주 좋았어요! 💧 단백질은 조금 부족하니 저녁에 계란이나 그릭요거트를 추가해보세요 💪"
 
 [get_coaching_report 호출 후 출력 형식]
 아래처럼 짧게 답하세요:
@@ -339,6 +339,7 @@ def chat(
 
             elif fn_name == "get_coaching_advice":
                 report = make_user_report(db, current_user)
+                report_payload = report
                 fn_result = json.dumps(report, ensure_ascii=False)
 
             elif fn_name == "get_coaching_report":

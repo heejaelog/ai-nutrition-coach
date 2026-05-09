@@ -51,3 +51,19 @@ app.include_router(chatbot.router)
 @app.get("/")
 def root():
     return {"message": "AI Nutrition Coach API 서버 정상 작동 중"}
+
+
+@app.post("/admin/reset-users")
+def reset_users():
+    db = SessionLocal()
+    try:
+        db.execute(__import__("sqlalchemy").text("SET FOREIGN_KEY_CHECKS = 0"))
+        db.execute(__import__("sqlalchemy").text("TRUNCATE TABLE friendships"))
+        db.execute(__import__("sqlalchemy").text("TRUNCATE TABLE user_skins"))
+        db.execute(__import__("sqlalchemy").text("TRUNCATE TABLE daily_records"))
+        db.execute(__import__("sqlalchemy").text("TRUNCATE TABLE users"))
+        db.execute(__import__("sqlalchemy").text("SET FOREIGN_KEY_CHECKS = 1"))
+        db.commit()
+        return {"message": "users 초기화 완료. 이제 재가입하면 id=1 받아요."}
+    finally:
+        db.close()

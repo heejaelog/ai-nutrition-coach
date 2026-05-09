@@ -4,19 +4,9 @@ from datetime import date
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.users import get_next_skin_price
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
-
-def get_next_skin_price(db: Session, user: models.User) -> int:
-    """보유하지 않은 스킨 중 가장 저렴한 가격 반환. 없으면 0."""
-    owned_ids = {us.skin_id for us in user.owned_skins}
-    cheapest = (
-        db.query(models.Skin)
-        .filter(models.Skin.id.notin_(owned_ids) if owned_ids else True)
-        .order_by(models.Skin.price.asc())
-        .first()
-    )
-    return cheapest.price if cheapest else 0
 
 
 def calc_score(water, water_goal, protein, protein_goal,
@@ -31,19 +21,12 @@ def calc_score(water, water_goal, protein, protein_goal,
             pct(strength, strength_goal) * 30 +
             pct(cardio, cardio_goal) * 10
         )
-    elif goal == "weight_loss":
+    else:  # weight_loss
         score = (
             pct(water, water_goal) * 25 +
             pct(protein, protein_goal) * 25 +
             pct(strength, strength_goal) * 15 +
             pct(cardio, cardio_goal) * 35
-        )
-    else:  # health_maintenance
-        score = (
-            pct(water, water_goal) * 25 +
-            pct(protein, protein_goal) * 30 +
-            pct(strength, strength_goal) * 22 +
-            pct(cardio, cardio_goal) * 23
         )
     return round(score)
 

@@ -22,6 +22,7 @@ def build_user_response(db: Session, user: models.User) -> schemas.UserResponse:
     data = schemas.UserResponse.model_validate(user)
     data.next_skin = get_next_skin_price(db, user)
     data.owned_skin_count = len(user.owned_skins)
+    data.equipped_skin_image_key = user.equipped_skin.image_key if user.equipped_skin else None
     return data
 
 
@@ -47,19 +48,14 @@ def update_me(
         weight = current_user.weight_kg
         if req.goal == "muscle_gain":
             current_user.water_goal = int(weight * 40)
-            current_user.protein_goal = round(weight * 2.0, 1)
+            current_user.protein_goal = round(weight * 1.6, 1)  # 한국인 식생활지침 1.2~1.7g/kg 중간값
             current_user.strength_goal = 60
             current_user.cardio_goal = 20
-        elif req.goal == "weight_loss":
+        else:  # weight_loss
             current_user.water_goal = int(weight * 35)
-            current_user.protein_goal = round(weight * 1.4, 1)
+            current_user.protein_goal = round(weight * 1.4, 1)  # 한국인 식생활지침 1.2~1.7g/kg
             current_user.strength_goal = 20
-            current_user.cardio_goal = 45
-        else:  # health_maintenance
-            current_user.water_goal = int(weight * 35)
-            current_user.protein_goal = round(weight * 1.2, 1)
-            current_user.strength_goal = 30
-            current_user.cardio_goal = 30
+            current_user.cardio_goal = 45  # ACSM 체중감량 주 200~300분 기준 45분/일
 
     db.commit()
     db.refresh(current_user)

@@ -8,7 +8,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
-    goal: str = "muscle_gain"   # muscle_gain / weight_loss / health_maintenance
+    goal: str = "muscle_gain"   # muscle_gain / weight_loss
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -36,6 +36,7 @@ class UserResponse(BaseModel):
     cardio_goal: int
     turtle_count: int
     equipped_skin_id: Optional[int] = None
+    equipped_skin_image_key: Optional[str] = None
     next_skin: int = 0
     owned_skin_count: int = 0
 
@@ -107,18 +108,13 @@ class WeeklyResponse(BaseModel):
     avg_protein: float
     avg_strength: int
     avg_cardio: int
-    global_avg_water: int
-    global_avg_protein: float
-    # 시계열 추세
     water_trend: str
     protein_trend: str
     exercise_trend: str
-    # 클러스터링 기반 유사 사용자 비교
     cluster_avg_water: int
     cluster_avg_protein: int
     cluster_avg_strength: int
     cluster_avg_cardio: int
-    cluster_avg_exercise: int
     cluster_size: int
     cluster_label: str
 
@@ -152,6 +148,7 @@ class FriendProfileResponse(BaseModel):
     turtle_count: int
     equipped_skin_id: Optional[int] = None
     equipped_skin_name: Optional[str] = None
+    equipped_skin_image_key: Optional[str] = None
     # 오늘 기록
     water_ml: int
     water_goal: int
@@ -171,6 +168,7 @@ class FriendListItem(BaseModel):
     turtle_count: int
     equipped_skin_id: Optional[int] = None
     equipped_skin_name: Optional[str] = None
+    equipped_skin_image_key: Optional[str] = None
     score: int               # 오늘 달성률
 
 class PendingRequestItem(BaseModel):
@@ -192,3 +190,5 @@ class ChatResponse(BaseModel):
     turtle_gained: bool = False
     turtle_count: Optional[int] = None
     report_data: Optional[dict] = None
+    status_data: Optional[dict] = None
+    food_data: Optional[dict] = None

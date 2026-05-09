@@ -19,7 +19,7 @@ class User(Base):
     gender = Column(String(10), default="male")  # male / female
 
     # 목표
-    goal = Column(String(20), default="muscle_gain")  # muscle_gain / weight_loss / health_maintenance
+    goal = Column(String(20), default="muscle_gain")  # muscle_gain / weight_loss
     water_goal = Column(Integer, default=2000)         # ml
     protein_goal = Column(Float, default=60.0)         # g (소수점 허용)
     strength_goal = Column(Integer, default=30)      # 분 (근력 운동)

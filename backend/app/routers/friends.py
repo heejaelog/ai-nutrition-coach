@@ -58,6 +58,7 @@ def search_user(
             relation = "pending_received"
 
     skin_name = target.equipped_skin.name if target.equipped_skin else None
+    skin_image_key = target.equipped_skin.image_key if target.equipped_skin else None
 
     return {
         "id": target.id,
@@ -66,6 +67,7 @@ def search_user(
         "turtle_count": target.turtle_count,
         "equipped_skin_id": target.equipped_skin_id,
         "equipped_skin_name": skin_name,
+        "equipped_skin_image_key": skin_image_key,
         "relation": relation,
     }
 
@@ -180,6 +182,7 @@ def get_friends(
         ).first()
 
         skin_name = friend.equipped_skin.name if friend.equipped_skin else None
+        skin_image_key = friend.equipped_skin.image_key if friend.equipped_skin else None
         result.append(schemas.FriendListItem(
             friendship_id=f.id,
             user_id=friend.id,
@@ -188,6 +191,7 @@ def get_friends(
             turtle_count=friend.turtle_count,
             equipped_skin_id=friend.equipped_skin_id,
             equipped_skin_name=skin_name,
+            equipped_skin_image_key=skin_image_key,
             score=calc_score(record, friend),
         ))
     return result
@@ -221,6 +225,7 @@ def get_friend_profile(
     ).first()
 
     skin_name = friend.equipped_skin.name if friend.equipped_skin else None
+    skin_image_key = friend.equipped_skin.image_key if friend.equipped_skin else None
 
     return schemas.FriendProfileResponse(
         id=friend.id,
@@ -229,6 +234,7 @@ def get_friend_profile(
         turtle_count=friend.turtle_count,
         equipped_skin_id=friend.equipped_skin_id,
         equipped_skin_name=skin_name,
+        equipped_skin_image_key=skin_image_key,
         water_ml=record.water_ml if record else 0,
         water_goal=friend.water_goal,
         protein_g=record.protein_g if record else 0,

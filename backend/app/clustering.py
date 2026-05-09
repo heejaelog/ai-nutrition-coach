@@ -105,10 +105,8 @@ def _calc_score(my_avg: dict, user) -> int:
     c = pct(my_avg["cardio_min"],   user.cardio_goal)
     if user.goal == "muscle_gain":
         score = w*25 + p*35 + s*30 + c*10
-    elif user.goal == "weight_loss":
+    else:  # weight_loss
         score = w*25 + p*25 + s*15 + c*35
-    else:
-        score = w*25 + p*30 + s*22 + c*23
     return round(score)
 
 
@@ -206,10 +204,10 @@ def make_user_report(db: Session, user: models.User) -> dict:
         exercise_arr = [r.strength_min + r.cardio_min  for r in records]
     else:
         my_avg = {
-            "water_ml":     float(user.water_goal),
-            "protein_g":    float(user.protein_goal),
-            "strength_min": float(user.strength_goal),
-            "cardio_min":   float(user.cardio_goal),
+            "water_ml":     0.0,
+            "protein_g":    0.0,
+            "strength_min": 0.0,
+            "cardio_min":   0.0,
         }
         water_arr = protein_arr = exercise_arr = []
 

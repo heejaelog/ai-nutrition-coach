@@ -5,8 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api';
 import { C, card } from '../theme';
-
-const TURTLE_IMG = require('../../assets/꼬부기.png');
+import { getSkinImage, DEFAULT_TURTLE } from '../utils/skinImages';
 
 function MetricRow({ icon, label, value, max, unit, color, bg }) {
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
@@ -76,7 +75,7 @@ export default function FriendProfileScreen({ route }) {
         {/* 프로필 헤더 */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
-            <Image source={TURTLE_IMG} style={styles.avatarImg} resizeMode="contain" />
+            <Image source={getSkinImage(profile.equipped_skin_image_key)} style={styles.avatarImg} resizeMode="contain" />
           </View>
           <Text style={styles.profileName}>{profile.name}</Text>
           <View style={styles.profileMeta}>
@@ -91,7 +90,7 @@ export default function FriendProfileScreen({ route }) {
             )}
           </View>
           <View style={styles.turtleRow}>
-            <Image source={TURTLE_IMG} style={{ width: 16, height: 16 }} resizeMode="contain" />
+            <Image source={DEFAULT_TURTLE} style={{ width: 16, height: 16 }} resizeMode="contain" />
             <Text style={styles.turtleCount}>× {profile.turtle_count}</Text>
           </View>
         </View>

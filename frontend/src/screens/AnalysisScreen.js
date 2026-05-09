@@ -6,15 +6,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api';
 import { C, card } from '../theme';
+import { useAuth } from '../context/AuthContext';
 
 const W = Dimensions.get('window').width;
 
+const LEGEND_ITEMS = [
+  { label: '수분',   color: '#2563EB' },
+  { label: '단백질', color: '#EA580C' },
+  { label: '근력',   color: '#16A34A' },
+  { label: '유산소', color: '#F59E0B' },
+];
+
 const TREND_META = {
-  '증가':      { icon: 'trending-up',   color: '#16A34A' },
-  '감소':      { icon: 'trending-down', color: '#DC2626' },
-  '유지':      { icon: 'remove',        color: '#94A3B8' },
-  '데이터 부족': { icon: null,           color: '#94A3B8' },
+  '증가':       { icon: 'trending-up',   color: '#16A34A' },
+  '감소':       { icon: 'trending-down', color: '#DC2626' },
+  '유지':       { icon: 'remove',        color: '#94A3B8' },
+  '데이터 부족': { icon: null,            color: '#94A3B8' },
 };
+
 
 function StatChip({ icon, label, value, unit, color, bg, trend }) {
   const tm = trend ? TREND_META[trend] : null;
@@ -30,6 +39,18 @@ function StatChip({ icon, label, value, unit, color, bg, trend }) {
         </View>
       )}
     </View>
+  );
+}
+
+function PeriodBtn({ label, active, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.periodBtn, active && styles.periodBtnActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Text style={[styles.periodBtnText, active && styles.periodBtnTextActive]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -71,16 +92,19 @@ function CompareRow({ label, mine, avg, unit, color }) {
 }
 
 export default function AnalysisScreen() {
-  const [activeTab, setActiveTab] = useState('수분');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [period, setPeriod]         = useState('주간');
+  const [activeTab, setActiveTab]   = useState('통합');
+  const [weeklyData, setWeeklyData] = useState(null);
+  const [monthlyData, setMonthlyData] = useState(null);
+  const [loading, setLoading]       = useState(true);
 
   useFocusEffect(useCallback(() => {
     const load = async () => {
       try {
         setLoading(true);
         const res = await api.getWeekly();
-        setData(res);
+        setWeeklyData(res);
       } catch (e) {
         console.error('주간 데이터 로드 실패:', e.message);
       } finally {
@@ -89,6 +113,24 @@ export default function AnalysisScreen() {
     };
     load();
   }, []));
+
+  const handlePeriodChange = async (p) => {
+    if (p === period) return;
+    setPeriod(p);
+    if (p === '월간' && !monthlyData) {
+      try {
+        setLoading(true);
+        const res = await api.getMonthly();
+        setMonthlyData(res);
+      } catch (e) {
+        console.error('월간 데이터 로드 실패:', e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const data = period === '주간' ? weeklyData : monthlyData;
 
   if (loading || !data) {
     return (
@@ -99,21 +141,46 @@ export default function AnalysisScreen() {
   }
 
   const dataMap = {
-    수분:   { data: data.water.map((v) => v / 100 || 0.01), color: C.water,   label: '수분 (×100ml)', unit: 'ml', avg: data.avg_water, globalAvg: data.global_avg_water },
-    단백질: { data: data.protein.map((v) => v || 0.01),     color: C.protein,  label: '단백질 (g)',    unit: 'g',  avg: data.avg_protein, globalAvg: data.global_avg_protein },
-    근력:   { data: data.strength.map((v) => v || 0.01),    color: C.primary,  label: '근력 (분)',     unit: '분', avg: data.avg_strength, globalAvg: null },
-    유산소: { data: data.cardio.map((v) => v || 0.01),      color: '#F59E0B',  label: '유산소 (분)',   unit: '분', avg: data.avg_cardio, globalAvg: null },
+    수분:   { data: data.water.map((v) => v / 100 || 0.01),  color: C.water,   label: '수분 (×100ml)', unit: 'ml', avg: data.avg_water },
+    단백질: { data: data.protein.map((v) => v || 0.01),      color: C.protein,  label: '단백질 (g)',   unit: 'g',  avg: data.avg_protein },
+    근력:   { data: data.strength.map((v) => v || 0.01),     color: C.primary,  label: '근력 (분)',    unit: '분', avg: data.avg_strength },
+    유산소: { data: data.cardio.map((v) => v || 0.01),       color: '#F59E0B',  label: '유산소 (분)',  unit: '분', avg: data.avg_cardio },
   };
 
   const current = dataMap[activeTab];
+
+  const toPct = (val, goal) => {
+    if (!goal || goal === 0) return 0.01;
+    const pct = Math.round((val / goal) * 100);
+    return pct <= 0 ? 0.01 : Math.min(pct, 150);
+  };
+
+  const combinedDatasets = user ? [
+    { data: data.water.map((v) => toPct(v, user.water_goal)),     color: (op = 1) => `rgba(37,99,235,${op})`,  strokeWidth: 2.5 },
+    { data: data.protein.map((v) => toPct(v, user.protein_goal)), color: (op = 1) => `rgba(234,88,12,${op})`,  strokeWidth: 2.5 },
+    { data: data.strength.map((v) => toPct(v, user.strength_goal)),color:(op = 1) => `rgba(22,163,74,${op})`,  strokeWidth: 2.5 },
+    { data: data.cardio.map((v) => toPct(v, user.cardio_goal)),   color: (op = 1) => `rgba(245,158,11,${op})`, strokeWidth: 2.5 },
+  ] : [];
+
+  const headerSub = period === '주간'
+    ? `${data.labels[0]}요일 – ${data.labels[data.labels.length - 1]}요일`
+    : `${data.labels[0]} ~ ${data.labels[data.labels.length - 1]}`;
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
         <SafeAreaView edges={['top']}>
           <View style={styles.headerInner}>
-            <Text style={styles.headerTitle}>주간 리포트</Text>
-            <Text style={styles.headerSub}>{data.labels[0]}요일 – {data.labels[6]}요일</Text>
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.headerTitle}>리포트</Text>
+                <Text style={styles.headerSub}>{headerSub}</Text>
+              </View>
+              <View style={styles.periodToggle}>
+                <PeriodBtn label="주간" active={period === '주간'} onPress={() => handlePeriodChange('주간')} />
+                <PeriodBtn label="월간" active={period === '월간'} onPress={() => handlePeriodChange('월간')} />
+              </View>
+            </View>
           </View>
         </SafeAreaView>
       </View>
@@ -122,10 +189,10 @@ export default function AnalysisScreen() {
 
         {/* 요약 칩 */}
         <View style={styles.chipRow}>
-          <StatChip icon="water"     label="수분"   value={data.avg_water}    unit="ml" color={C.water}   bg={C.waterBg}    trend={data.water_trend} />
-          <StatChip icon="nutrition" label="단백질" value={data.avg_protein}  unit="g"  color={C.protein} bg={C.proteinBg}  trend={data.protein_trend} />
+          <StatChip icon="water"     label="수분"   value={data.avg_water}    unit="ml" color={C.water}   bg={C.waterBg}   trend={data.water_trend} />
+          <StatChip icon="nutrition" label="단백질" value={data.avg_protein}  unit="g"  color={C.protein} bg={C.proteinBg} trend={data.protein_trend} />
           <StatChip icon="barbell"   label="근력"   value={data.avg_strength} unit="분" color={C.primary} bg={C.exerciseBg} trend={data.exercise_trend} />
-          <StatChip icon="bicycle"   label="유산소" value={data.avg_cardio}   unit="분" color="#F59E0B"   bg="#FFFBEB"       trend={null} />
+          <StatChip icon="bicycle"   label="유산소" value={data.avg_cardio}   unit="분" color="#F59E0B"   bg="#FFFBEB"      trend={null} />
         </View>
 
         {/* 차트 카드 */}
@@ -133,54 +200,92 @@ export default function AnalysisScreen() {
           <Text style={styles.cardTitle}>나의 섭취 패턴</Text>
 
           <View style={styles.tabRow}>
-            {['수분', '단백질', '근력', '유산소'].map((t) => (
+            {['통합', '수분', '단백질', '근력', '유산소'].map((t) => (
               <TabBtn key={t} label={t} active={activeTab === t} onPress={() => setActiveTab(t)} />
             ))}
           </View>
 
-          <LineChart
-            data={{
-              labels: data.labels,
-              datasets: [{ data: current.data, color: () => current.color, strokeWidth: 2.5 }],
-              legend: [current.label],
-            }}
-            width={W - 56}
-            height={180}
-            chartConfig={{
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
-              color: () => current.color,
-              strokeWidth: 2,
-              decimalPlaces: 0,
-              propsForLabels: { fontSize: 11, fill: C.sub },
-              propsForDots: { r: 4, strokeWidth: 2, stroke: current.color },
-              propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4' },
-            }}
-            bezier
-            withInnerLines
-            style={{ borderRadius: 12, marginLeft: -8, marginTop: 12 }}
-          />
-        </View>
-
-        {/* 클러스터 비교 카드 */}
-        <View style={[card, { padding: 18 }]}>
-          <Text style={styles.cardTitle}>
-            {data.cluster_size > 0
-              ? `나와 비슷한 사용자 ${data.cluster_size}명과 비교`
-              : '유사 사용자 비교'}
-          </Text>
-          <Text style={styles.cardSub}>{data.cluster_label}</Text>
-          {data.cluster_size > 0 ? (
+          {activeTab === '통합' ? (
             <>
-              <CompareRow label="수분"        mine={data.avg_water    ?? 0} avg={data.cluster_avg_water     ?? 0} unit="ml" color={C.water} />
-              <CompareRow label="단백질"      mine={data.avg_protein  ?? 0} avg={data.cluster_avg_protein   ?? 0} unit="g"  color={C.protein} />
-              <CompareRow label="근력 운동"   mine={data.avg_strength ?? 0} avg={data.cluster_avg_strength  ?? 0} unit="분" color={C.primary} />
-              <CompareRow label="유산소 운동" mine={data.avg_cardio   ?? 0} avg={data.cluster_avg_cardio    ?? 0} unit="분" color="#F59E0B" />
+              <LineChart
+                data={{ labels: data.labels, datasets: combinedDatasets }}
+                width={W - 56}
+                height={200}
+                chartConfig={{
+                  backgroundGradientFrom: '#fff',
+                  backgroundGradientTo: '#fff',
+                  color: (opacity = 1) => `rgba(100,116,139,${opacity})`,
+                  strokeWidth: 2,
+                  decimalPlaces: 0,
+                  propsForLabels: { fontSize: 11, fill: C.sub },
+                  propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4' },
+                }}
+                bezier
+                withInnerLines
+                withDots={false}
+                style={{ borderRadius: 12, marginLeft: -8, marginTop: 12 }}
+              />
+              <View style={styles.legendRow}>
+                {LEGEND_ITEMS.map((item) => (
+                  <View key={item.label} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                    <Text style={styles.legendText}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.legendNote}>* Y축: 목표 달성률 (%)</Text>
             </>
           ) : (
-            <Text style={styles.noClusterText}>아직 같은 그룹의 비교 데이터가 없어요.{'\n'}사용자가 늘어나면 자동으로 비교됩니다.</Text>
+            <LineChart
+              data={{
+                labels: data.labels,
+                datasets: [{ data: current.data, color: () => current.color, strokeWidth: 2.5 }],
+                legend: [current.label],
+              }}
+              width={W - 56}
+              height={180}
+              chartConfig={{
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                color: () => current.color,
+                strokeWidth: 2,
+                decimalPlaces: 0,
+                propsForLabels: { fontSize: 11, fill: C.sub },
+                propsForDots: { r: 4, strokeWidth: 2, stroke: current.color },
+                propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4' },
+              }}
+              bezier
+              withInnerLines
+              style={{ borderRadius: 12, marginLeft: -8, marginTop: 12 }}
+            />
           )}
         </View>
+
+        {/* 유사 사용자 비교 */}
+        {data && (
+          <View style={[card, { padding: 18 }]}>
+            <Text style={styles.cardTitle}>
+              {data.cluster_size > 0
+                ? `나와 비슷한 사용자 ${data.cluster_size}명과 비교`
+                : '유사 사용자 비교'}
+            </Text>
+            <Text style={styles.cardSub}>
+              {data.cluster_label}
+              {data.cluster_label ? '  ·  ' : ''}
+              {period === '주간' ? '7일 평균 기준' : '6개월 평균 기준'}
+            </Text>
+            {data.cluster_size > 0 ? (
+              <>
+                <CompareRow label="수분"        mine={data.avg_water    ?? 0} avg={data.cluster_avg_water    ?? 0} unit="ml" color={C.water} />
+                <CompareRow label="단백질"      mine={data.avg_protein  ?? 0} avg={data.cluster_avg_protein  ?? 0} unit="g"  color={C.protein} />
+                <CompareRow label="근력 운동"   mine={data.avg_strength ?? 0} avg={data.cluster_avg_strength ?? 0} unit="분" color={C.primary} />
+                <CompareRow label="유산소 운동" mine={data.avg_cardio   ?? 0} avg={data.cluster_avg_cardio   ?? 0} unit="분" color="#F59E0B" />
+              </>
+            ) : (
+              <Text style={styles.noClusterText}>아직 같은 그룹의 비교 데이터가 없어요.{'\n'}사용자가 늘어나면 자동으로 비교됩니다.</Text>
+            )}
+          </View>
+        )}
 
       </ScrollView>
     </View>
@@ -192,8 +297,15 @@ const styles = StyleSheet.create({
 
   header: { backgroundColor: C.hero, paddingBottom: 22, paddingHorizontal: 22 },
   headerInner: { paddingTop: 6 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 2 },
   headerSub: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
+
+  periodToggle: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3, gap: 2 },
+  periodBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 8 },
+  periodBtnActive: { backgroundColor: '#fff' },
+  periodBtnText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
+  periodBtnTextActive: { color: C.hero },
 
   scroll: { padding: 18, paddingTop: 16 },
 
@@ -217,6 +329,12 @@ const styles = StyleSheet.create({
   tabBtnActive: { backgroundColor: C.hero, borderColor: C.hero },
   tabBtnText: { fontSize: 12, fontWeight: '600', color: C.sub },
   tabBtnTextActive: { color: '#fff' },
+
+  legendRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { fontSize: 11, fontWeight: '600', color: C.sub },
+  legendNote: { fontSize: 10, color: C.muted, textAlign: 'center', marginTop: 6 },
 
   compareRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.bg },
   compareLabel: { fontSize: 13, fontWeight: '600', color: C.sub, marginBottom: 10 },

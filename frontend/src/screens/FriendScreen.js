@@ -8,8 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api';
 import { C, card, shadow } from '../theme';
-
-const TURTLE_IMG = require('../../assets/꼬부기.png');
+import { getSkinImage, DEFAULT_TURTLE } from '../utils/skinImages';
 
 function ScoreBar({ score }) {
   return (
@@ -26,7 +25,7 @@ function FriendCard({ item, onPress }) {
   return (
     <TouchableOpacity style={[card, styles.friendCard]} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.friendAvatar}>
-        <Image source={TURTLE_IMG} style={styles.friendAvatarImg} resizeMode="contain" />
+        <Image source={getSkinImage(item.equipped_skin_image_key)} style={styles.friendAvatarImg} resizeMode="contain" />
         {item.equipped_skin_name && (
           <View style={styles.skinBadge}>
             <Text style={styles.skinBadgeText} numberOfLines={1}>{item.equipped_skin_name}</Text>
@@ -51,7 +50,7 @@ function PendingCard({ item, onAccept }) {
     <View style={[card, styles.pendingCard]}>
       <View style={styles.pendingLeft}>
         <View style={styles.friendAvatar}>
-          <Image source={TURTLE_IMG} style={styles.friendAvatarImg} resizeMode="contain" />
+          <Image source={DEFAULT_TURTLE} style={styles.friendAvatarImg} resizeMode="contain" />
         </View>
         <Text style={styles.pendingName}>{item.requester_name}님의 친구 요청</Text>
       </View>
@@ -185,7 +184,7 @@ export default function FriendScreen({ navigation }) {
               <View style={styles.searchResult}>
                 <View style={styles.searchResultLeft}>
                   <View style={styles.searchAvatar}>
-                    <Image source={TURTLE_IMG} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                    <Image source={getSkinImage(searchResult.equipped_skin_image_key)} style={{ width: 28, height: 28 }} resizeMode="contain" />
                   </View>
                   <View>
                     <Text style={styles.searchName}>{searchResult.name}</Text>
@@ -229,7 +228,7 @@ export default function FriendScreen({ navigation }) {
           <ActivityIndicator color={C.primary} style={{ marginTop: 20 }} />
         ) : friends.length === 0 ? (
           <View style={styles.empty}>
-            <Image source={TURTLE_IMG} style={styles.emptyImg} resizeMode="contain" />
+            <Image source={DEFAULT_TURTLE} style={styles.emptyImg} resizeMode="contain" />
             <Text style={styles.emptyText}>아직 친구가 없어요</Text>
             <Text style={styles.emptySubText}>위에서 ID로 친구를 추가해보세요</Text>
           </View>

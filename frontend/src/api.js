@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.35.10:8000';
+const BASE_URL = 'https://lucid-simplicity-production.up.railway.app';
 
 async function request(method, path, body = null) {
   const token = await AsyncStorage.getItem('token');
@@ -12,7 +12,14 @@ async function request(method, path, body = null) {
   if (body) options.body = JSON.stringify(body);
 
   const res = await fetch(`${BASE_URL}${path}`, options);
-  const data = await res.json();
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`서버 응답 오류 (${res.status}): ${text.slice(0, 80)}`);
+  }
 
   if (!res.ok) throw new Error(data.detail || '요청 실패');
   return data;
@@ -36,7 +43,7 @@ export const api = {
 
   // Analysis
   getWeekly: () => request('GET', '/api/analysis/weekly'),
-  getMonthly: (year, month) => request('GET', `/api/analysis/monthly?year=${year}&month=${month}`),
+  getMonthly: () => request('GET', '/api/analysis/monthly'),
 
   // Friends
   searchUser: (userId) => request('GET', `/api/friends/search?user_id=${userId}`),
@@ -52,4 +59,7 @@ export const api = {
   buySkin: (skinId) => request('POST', `/api/skins/${skinId}/buy`),
   equipSkin: (skinId) => request('POST', `/api/skins/${skinId}/equip`),
   unequipSkin: () => request('POST', '/api/skins/unequip'),
+
+  // Chatbot
+  sendChatMessage: (message) => request('POST', '/api/chatbot/message', { message }),
 };

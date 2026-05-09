@@ -8,10 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { C, card } from '../theme';
-
-const TURTLE_IMG = require('../../assets/꼬부기.png');
-const GOALS = ['근육 증량', '체중 감량'];
+import { getSkinImage } from '../utils/skinImages';
+const GOALS   = ['근육 증량', '체중 감량'];
 const GENDERS = ['남', '여'];
+
+const GENDER_KO = { male: '남', female: '여' };
+const GOAL_KO   = { muscle_gain: '근육 증량', weight_loss: '체중 감량', health_maintenance: '건강 유지' };
+const GENDER_EN = { '남': 'male', '여': 'female' };
+const GOAL_EN   = { '근육 증량': 'muscle_gain', '체중 감량': 'weight_loss', '건강 유지': 'health_maintenance' };
 
 function Row({ icon, label, value, onPress, danger }) {
   return (
@@ -103,9 +107,14 @@ export default function MyPageScreen({ navigation }) {
   const saveField = async (field, rawVal) => {
     try {
       setSaving(true);
-      const isNum = ['height', 'weight', 'age', 'water_goal', 'protein_goal', 'strength_goal', 'cardio_goal'].includes(field);
-      const value = isNum ? (field === 'height' || field === 'weight' ? parseFloat(rawVal) : parseInt(rawVal)) : rawVal;
-      if (isNum && isNaN(value)) { Alert.alert('알림', '올바른 숫자를 입력해주세요.'); return; }
+      const isNum = ['height_cm', 'weight_kg', 'age', 'water_goal', 'protein_goal', 'strength_goal', 'cardio_goal'].includes(field);
+      let value = rawVal;
+      if (field === 'gender') value = GENDER_EN[rawVal] || rawVal;
+      else if (field === 'goal') value = GOAL_EN[rawVal] || rawVal;
+      else if (isNum) {
+        value = (field === 'height_cm' || field === 'weight_kg') ? parseFloat(rawVal) : parseInt(rawVal);
+        if (isNaN(value)) { Alert.alert('알림', '올바른 숫자를 입력해주세요.'); return; }
+      }
       const updated = await api.updateMe({ [field]: value });
       updateUser(updated);
       setEditModal(null);
@@ -131,7 +140,7 @@ export default function MyPageScreen({ navigation }) {
         <SafeAreaView edges={['top']}>
           <View style={styles.heroInner}>
             <View style={styles.avatarWrap}>
-              <Image source={TURTLE_IMG} style={styles.avatarImg} resizeMode="contain" />
+              <Image source={getSkinImage(user?.equipped_skin_image_key)} style={styles.avatarImg} resizeMode="contain" />
             </View>
             <Text style={styles.userName}>{user?.name}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
@@ -161,19 +170,19 @@ export default function MyPageScreen({ navigation }) {
 
         <SectionLabel label="신체 정보" />
         <View style={[card, { padding: 0, overflow: 'hidden' }]}>
-          <Row icon="body-outline" label="키" value={`${user?.height ?? '-'} cm`}
-            onPress={() => openEdit('height', '키', user?.height, 'cm', 'decimal-pad')} />
-          <Row icon="scale-outline" label="몸무게" value={`${user?.weight ?? '-'} kg`}
-            onPress={() => openEdit('weight', '몸무게', user?.weight, 'kg', 'decimal-pad')} />
+          <Row icon="body-outline" label="키" value={`${user?.height_cm ?? '-'} cm`}
+            onPress={() => openEdit('height_cm', '키', user?.height_cm, 'cm', 'decimal-pad')} />
+          <Row icon="scale-outline" label="몸무게" value={`${user?.weight_kg ?? '-'} kg`}
+            onPress={() => openEdit('weight_kg', '몸무게', user?.weight_kg, 'kg', 'decimal-pad')} />
           <Row icon="calendar-outline" label="나이" value={`${user?.age ?? '-'} 세`}
             onPress={() => openEdit('age', '나이', user?.age, '세', 'numeric')} />
-          <Row icon="person-outline" label="성별" value={user?.gender ?? '-'}
+          <Row icon="person-outline" label="성별" value={GENDER_KO[user?.gender] ?? '-'}
             onPress={() => openSelect('gender', '성별 선택', GENDERS)} />
         </View>
 
         <SectionLabel label="목표 설정" />
         <View style={[card, { padding: 0, overflow: 'hidden' }]}>
-          <Row icon="trophy-outline" label="목표" value={user?.goal ?? '-'}
+          <Row icon="trophy-outline" label="목표" value={GOAL_KO[user?.goal] ?? '-'}
             onPress={() => openSelect('goal', '목표 선택', GOALS)} />
           <Row icon="water-outline" label="수분 목표" value={`${((user?.water_goal ?? 0) / 1000).toFixed(1)} L`}
             onPress={() => openEdit('water_goal', '수분 목표', user?.water_goal, 'ml', 'numeric')} />
@@ -190,7 +199,9 @@ export default function MyPageScreen({ navigation }) {
           <Row
             icon="sparkles-outline"
             label="스킨 상점"
-            value={user?.equipped_skin_id ? '장착 중' : '없음'}
+            value={user?.equipped_skin_image_key
+              ? { fire: '불꽃 꼬부기', ice: '얼음 꼬부기', gold: '황금 꼬부기', sakura: '벚꽃 꼬부기', space: '우주 꼬부기' }[user.equipped_skin_image_key] ?? '장착 중'
+              : '없음'}
             onPress={() => navigation.navigate('SkinShop')}
           />
         </View>
@@ -228,7 +239,11 @@ export default function MyPageScreen({ navigation }) {
           visible={true}
           title={selectModal.title}
           options={selectModal.options}
-          selected={user?.[selectModal.field]}
+          selected={
+            selectModal.field === 'gender' ? GENDER_KO[user?.gender] :
+            selectModal.field === 'goal'   ? GOAL_KO[user?.goal] :
+            user?.[selectModal.field]
+          }
           onClose={() => setSelectModal(null)}
           onSelect={(val) => saveField(selectModal.field, val)}
         />

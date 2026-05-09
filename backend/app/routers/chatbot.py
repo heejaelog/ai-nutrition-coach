@@ -8,17 +8,19 @@ import json
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import date
+from datetime import date, timedelta
+from app.routers.dashboard import calc_score
 
 from openai import OpenAI
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
 from app.clustering import make_user_report
+from app.food_api import get_protein_foods, get_water_foods
 
 router = APIRouter(prefix="/api/chatbot", tags=["chatbot"])
 
-GOAL_KO   = {"muscle_gain": "근육 증량", "weight_loss": "체중 감량", "health_maintenance": "건강 유지"}
+GOAL_KO   = {"muscle_gain": "근육 증량", "weight_loss": "체중 감량"}
 GENDER_KO = {"male": "남성", "female": "여성"}
 
 # ── OpenAI 클라이언트 ──────────────────────────────────────
@@ -64,12 +66,47 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "get_coaching_report",
+            "name": "get_coaching_advice",
             "description": (
-                "사용자의 7일 평균 데이터와 유사 사용자 비교 기반 개인화 코칭 리포트를 생성합니다. "
-                "'코칭해줘', '분석해줘', '이번 주 어때', '피드백' 등의 요청에 사용하세요."
+                "사용자의 7일 데이터를 바탕으로 대화형 텍스트 코칭을 제공합니다. "
+                "'코칭해줘', '이번 주 어때', '피드백 줘' 등 조언을 원할 때 사용하세요."
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_coaching_report",
+            "description": (
+                "사용자의 7일 평균 데이터와 유사 사용자 비교 리포트 카드를 생성합니다. "
+                "'분석해줘', '리포트', '비교해줘' 등 수치 리포트를 원할 때 사용하세요."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recommend_food",
+            "description": (
+                "영양소 보충을 위한 음식을 추천합니다. "
+                "'단백질 채우려면 뭐 먹어?', '수분 어떻게 채워?', '뭐 먹어야 해?' 등에 사용하세요."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nutrient": {
+                        "type": "string",
+                        "description": "추천할 영양소: 'protein' 또는 'water'",
+                    },
+                    "amount_needed": {
+                        "type": "number",
+                        "description": "필요한 추가량 (단백질: g, 수분: ml). 모르면 오늘 현황에서 계산하세요.",
+                    },
+                },
+                "required": ["nutrient", "amount_needed"],
+            },
         },
     },
 ]
@@ -159,20 +196,36 @@ def _execute_save(db: Session, user: models.User, args: dict) -> dict:
 
 def _execute_today_status(db: Session, user: models.User) -> dict:
     record = _get_today_record(db, user.id)
+    water    = record.water_ml    if record else 0
+    protein  = record.protein_g   if record else 0
+    strength = record.strength_min if record else 0
+    cardio   = record.cardio_min   if record else 0
+    score    = calc_score(water, user.water_goal, protein, user.protein_goal,
+                          strength, user.strength_goal, cardio, user.cardio_goal,
+                          user.goal)
     return {
-        "water_ml":      record.water_ml      if record else 0,
+        "water_ml":      water,
         "water_goal":    user.water_goal,
-        "protein_g":     record.protein_g     if record else 0,
+        "protein_g":     protein,
         "protein_goal":  user.protein_goal,
-        "strength_min":  record.strength_min  if record else 0,
+        "strength_min":  strength,
         "strength_goal": user.strength_goal,
-        "cardio_min":    record.cardio_min    if record else 0,
+        "cardio_min":    cardio,
         "cardio_goal":   user.cardio_goal,
+        "score":         score,
         "turtle_count":  user.turtle_count,
     }
 
 
+def _current_week_range() -> str:
+    today = date.today()
+    sunday = today - timedelta(days=(today.weekday() + 1) % 7)
+    saturday = sunday + timedelta(days=6)
+    return f"{sunday.month}/{sunday.day}~{saturday.month}/{saturday.day}"
+
+
 def _build_system_prompt(user: models.User) -> str:
+    week_range = _current_week_range()
     return f"""당신은 '꼬부기 AI 코치'입니다. 사용자의 영양 및 운동 기록을 도와주고 개인화된 건강 코칭을 제공합니다.
 항상 한국어로 응답하세요. 친근하고 격려하는 말투를 사용하세요.
 🐢 거북이 이모티콘은 절대 사용하지 마세요.
@@ -192,12 +245,33 @@ def _build_system_prompt(user: models.User) -> str:
 - 유산소: 러닝/자전거/수영/줄넘기 등
 
 [조회 규칙]
-- "오늘 현황", "얼마나 했어", "몇 퍼센트" → get_today_status
-- "코칭해줘", "분석해줘", "이번 주 어때", "피드백", "비교해줘" → get_coaching_report
+- "오늘 현황", "오늘 내 기록", "얼마나 했어", "몇 퍼센트" → get_today_status
+- "코칭해줘", "이번 주 어때", "피드백 줘" → get_coaching_advice
+- "분석해줘", "리포트", "비교해줘" → get_coaching_report
 
-[코칭 리포트 출력 형식 - get_coaching_report 호출 후]
-get_coaching_report 결과를 받으면 아래처럼 짧게 답하세요:
-"{{이름}}님! 이번 주 기록을 분석했어요. 아래 리포트를 확인해보세요 📋
+[recommend_food 호출 후 출력 형식]
+음식 추천 카드가 자동으로 표시됩니다. 카드 내용은 반복하지 말고,
+한 줄 응원 멘트만 답하세요.
+예) "이 조합으로 저녁 챙겨보세요! 목표 금방 달성할 수 있어요 💪"
+
+[save_record_data 호출 후 출력 형식]
+기록 카드가 자동으로 표시됩니다. 저장된 수치는 반복하지 말고,
+남은 목표와 격려를 1~2문장으로만 답하세요.
+예) "단백질 잘 채우고 있어요! 저녁에 계란이나 그릭요거트 추가하면 목표 달성할 수 있어요 💪"
+
+[get_today_status 호출 후 출력 형식]
+현황 카드가 자동으로 표시됩니다. 수치는 반복하지 말고,
+잘 된 항목 칭찬 + 부족한 항목 조언을 2~3문장으로만 답하세요.
+예) "근력 운동은 완벽해요! 💪 저녁까지 수분과 단백질을 조금 더 채워봐요."
+
+[get_coaching_advice 호출 후 출력 형식]
+데이터를 보고 친근한 말투로 3~5문장 이내 텍스트 코칭을 해주세요.
+- 잘 된 항목은 칭찬, 부족한 항목은 구체적인 개선 팁 제시
+- 수치(ml, g, 분)를 직접 언급해도 됩니다
+
+[get_coaching_report 호출 후 출력 형식]
+아래처럼 짧게 답하세요:
+"{user.name}님! 이번 주 ({week_range}) 기록을 분석했어요. 아래 리포트를 확인해보세요 📋
 궁금한 점이 있으면 언제든 물어보세요!"
 수치, 분석 내용은 답변에 포함하지 마세요. 카드 UI에서 자동으로 표시됩니다.
 """
@@ -226,9 +300,11 @@ def chat(
     )
     msg = resp.choices[0].message
 
-    saved_data    = None
-    turtle_gained = False
-    turtle_count  = None
+    saved_data     = None
+    status_payload = None
+    food_payload   = None
+    turtle_gained  = False
+    turtle_count   = None
     report_payload = None
 
     if msg.tool_calls:
@@ -240,14 +316,30 @@ def chat(
 
             if fn_name == "save_record_data":
                 result = _execute_save(db, current_user, fn_args)
-                saved_data    = result.get("total_today")
+                saved_data = {
+                    "added":       result.get("added", {}),
+                    "total_today": result.get("total_today", {}),
+                    "goals":       result.get("goals", {}),
+                }
                 turtle_gained = result.get("turtle_gained", False)
                 turtle_count  = result.get("turtle_count")
                 fn_result = json.dumps(result, ensure_ascii=False)
 
             elif fn_name == "get_today_status":
                 result = _execute_today_status(db, current_user)
+                status_payload = result
                 fn_result = json.dumps(result, ensure_ascii=False)
+
+            elif fn_name == "recommend_food":
+                nutrient = fn_args.get("nutrient", "protein")
+                amount   = fn_args.get("amount_needed", 0)
+                result   = get_protein_foods(amount) if nutrient == "protein" else get_water_foods(amount)
+                food_payload = result
+                fn_result = json.dumps(result, ensure_ascii=False)
+
+            elif fn_name == "get_coaching_advice":
+                report = make_user_report(db, current_user)
+                fn_result = json.dumps(report, ensure_ascii=False)
 
             elif fn_name == "get_coaching_report":
                 report = make_user_report(db, current_user)
@@ -279,4 +371,6 @@ def chat(
         turtle_gained=turtle_gained,
         turtle_count=turtle_count,
         report_data=report_payload,
+        status_data=status_payload,
+        food_data=food_payload,
     )

@@ -7,10 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { C, card, shadow } from '../theme';
+import { SKIN_IMAGES, DEFAULT_TURTLE } from '../utils/skinImages';
 
-const TURTLE_IMG = require('../../assets/꼬부기.png');
-
-// 이미지 준비 전 플레이스홀더 색상
 const SKIN_COLORS = {
   fire: '#EF4444',
   ice: '#60A5FA',
@@ -28,9 +26,7 @@ function SkinCard({ item, equippedId, onBuy, onEquip, onUnequip }) {
     <View style={[card, styles.skinCard, isEquipped && styles.skinCardEquipped]}>
       {/* 플레이스홀더 아이콘 (나중에 실제 이미지로 교체) */}
       <View style={[styles.skinImgBox, { backgroundColor: color + '22', borderColor: color + '55' }]}>
-        <Image source={TURTLE_IMG} style={styles.skinImg} resizeMode="contain"
-          tintColor={color}  // 나중에 실제 스킨 이미지로 교체 시 제거
-        />
+        <Image source={SKIN_IMAGES[item.image_key] || DEFAULT_TURTLE} style={styles.skinImg} resizeMode="contain" />
         {isEquipped && (
           <View style={styles.equippedBadge}>
             <Ionicons name="checkmark-circle" size={18} color={C.primary} />
@@ -53,7 +49,7 @@ function SkinCard({ item, equippedId, onBuy, onEquip, onUnequip }) {
         )
       ) : (
         <TouchableOpacity style={styles.buyBtn} onPress={() => onBuy(item)}>
-          <Image source={TURTLE_IMG} style={{ width: 14, height: 14 }} resizeMode="contain" />
+          <Image source={DEFAULT_TURTLE} style={{ width: 14, height: 14 }} resizeMode="contain" />
           <Text style={styles.buyBtnText}>{item.price}개</Text>
         </TouchableOpacity>
       )}
@@ -134,7 +130,7 @@ export default function SkinShopScreen() {
     <View style={styles.root}>
       {/* 코인 현황 */}
       <View style={styles.coinBar}>
-        <Image source={TURTLE_IMG} style={{ width: 22, height: 22 }} resizeMode="contain" />
+        <Image source={DEFAULT_TURTLE} style={{ width: 22, height: 22 }} resizeMode="contain" />
         <Text style={styles.coinText}>보유 꼬부기 코인</Text>
         <Text style={styles.coinNum}>{user?.turtle_count ?? 0}개</Text>
       </View>

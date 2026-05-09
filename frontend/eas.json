@@ -15,7 +15,4 @@
     },
     "production": {}
   },
-  "update": {
-    "channel": "production"
-  }
 }

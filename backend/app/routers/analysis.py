@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date, timedelta
+import calendar
 import numpy as np
 from app.database import get_db
 from app import models, schemas
@@ -9,7 +10,8 @@ from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
-WEEKDAY_KO = ["월", "화", "수", "목", "금", "토", "일"]
+# Python weekday: Mon=0 ... Sat=5, Sun=6
+WEEKDAY_KO = {0: "월", 1: "화", 2: "수", 3: "목", 4: "금", 5: "토", 6: "일"}
 
 
 def safe_avg(lst):
@@ -17,8 +19,7 @@ def safe_avg(lst):
     return round(sum(filtered) / len(filtered)) if filtered else 0
 
 
-def calc_trend(values: list[int]) -> str:
-    """7일 데이터의 선형 추세를 계산해 '증가' / '감소' / '유지' 반환"""
+def calc_trend(values: list) -> str:
     non_zero = [(i, v) for i, v in enumerate(values) if v > 0]
     if len(non_zero) < 2:
         return "데이터 부족"
@@ -26,7 +27,7 @@ def calc_trend(values: list[int]) -> str:
     vals = np.array([x[1] for x in non_zero], dtype=float)
     slope = np.polyfit(indices, vals, 1)[0]
     avg = vals.mean()
-    pct = (slope * 6 / avg * 100) if avg > 0 else 0  # 7일간 예상 변화율(%)
+    pct = (slope * (len(values) - 1) / avg * 100) if avg > 0 else 0
     if pct > 5:
         return "증가"
     elif pct < -5:
@@ -83,7 +84,7 @@ def get_cluster_comparison(db: Session, current_user_id: int) -> dict:
     ]
 
     GENDER_LABEL = {"male": "남", "female": "여"}
-    GOAL_LABEL = {"muscle_gain": "근육증량", "weight_loss": "체중감량", "health_maintenance": "건강유지"}
+    GOAL_LABEL = {"muscle_gain": "근육증량", "weight_loss": "체중감량"}
     cluster_label = (
         f"{GENDER_LABEL.get(my_gender, my_gender)} · "
         f"{GOAL_LABEL.get(my_goal, my_goal)} · "
@@ -95,8 +96,7 @@ def get_cluster_comparison(db: Session, current_user_id: int) -> dict:
     fallback = {
         "cluster_avg_water": 0, "cluster_avg_protein": 0,
         "cluster_avg_strength": 0, "cluster_avg_cardio": 0,
-        "cluster_avg_exercise": 0, "cluster_size": 0,
-        "cluster_label": cluster_label,
+        "cluster_size": 0, "cluster_label": cluster_label,
     }
 
     if not group_user_ids:
@@ -126,7 +126,6 @@ def get_cluster_comparison(db: Session, current_user_id: int) -> dict:
         "cluster_avg_protein":  round(rows.avg_protein or 0),
         "cluster_avg_strength": round(rows.avg_strength or 0),
         "cluster_avg_cardio":   round(rows.avg_cardio or 0),
-        "cluster_avg_exercise": round((rows.avg_strength or 0) + (rows.avg_cardio or 0)),
         "cluster_size":         int(rows.user_count),
         "cluster_label":        cluster_label,
     }
@@ -138,7 +137,10 @@ def get_weekly(
     current_user: models.User = Depends(get_current_user),
 ):
     today = date.today()
-    days = [today - timedelta(days=6 - i) for i in range(7)]
+    # 이번 주 일요일(0) ~ 토요일(6)
+    days_since_sunday = (today.weekday() + 1) % 7  # Mon=1, ..., Sun=0
+    sunday = today - timedelta(days=days_since_sunday)
+    days = [sunday + timedelta(days=i) for i in range(7)]
 
     records_map = {
         r.date: r
@@ -156,20 +158,9 @@ def get_weekly(
         labels.append(WEEKDAY_KO[d.weekday()])
         r = records_map.get(d)
         water.append(r.water_ml if r else 0)
-        protein.append(r.protein_g if r else 0)
+        protein.append(float(r.protein_g) if r else 0.0)
         strength.append(r.strength_min if r else 0)
         cardio.append(r.cardio_min if r else 0)
-
-    # 전체 사용자 평균 (최근 7일)
-    week_ago = today - timedelta(days=7)
-    global_avg = (
-        db.query(
-            func.avg(models.DailyRecord.water_ml).label("water"),
-            func.avg(models.DailyRecord.protein_g).label("protein"),
-        )
-        .filter(models.DailyRecord.date >= week_ago)
-        .first()
-    )
 
     exercise = [s + c for s, c in zip(strength, cardio)]
     cluster = get_cluster_comparison(db, current_user.id)
@@ -184,56 +175,74 @@ def get_weekly(
         "avg_protein": safe_avg(protein),
         "avg_strength": safe_avg(strength),
         "avg_cardio": safe_avg(cardio),
-        "global_avg_water": round(global_avg.water or 0),
-        "global_avg_protein": round(global_avg.protein or 0),
-        # 시계열 추세
         "water_trend": calc_trend(water),
         "protein_trend": calc_trend(protein),
         "exercise_trend": calc_trend(exercise),
-        # 클러스터링
         **cluster,
     }
 
 
-@router.get("/monthly", response_model=dict)
+@router.get("/monthly", response_model=schemas.WeeklyResponse)
 def get_monthly(
-    year: int = None,
-    month: int = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     today = date.today()
-    y = year or today.year
-    m = month or today.month
 
-    records = (
-        db.query(models.DailyRecord)
-        .filter(
-            models.DailyRecord.user_id == current_user.id,
-            func.year(models.DailyRecord.date) == y,
-            func.month(models.DailyRecord.date) == m,
+    # 최근 6개월 목록 (과거 → 현재)
+    months = []
+    for i in range(5, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        months.append((y, m))
+
+    labels, water, protein, strength, cardio = [], [], [], [], []
+
+    for y, m in months:
+        first_day = date(y, m, 1)
+        last_day  = date(y, m, calendar.monthrange(y, m)[1])
+
+        records = (
+            db.query(models.DailyRecord)
+            .filter(
+                models.DailyRecord.user_id == current_user.id,
+                models.DailyRecord.date >= first_day,
+                models.DailyRecord.date <= last_day,
+            )
+            .all()
         )
-        .all()
-    )
 
-    data = {}
-    for r in records:
-        score = min(
-            round(
-                (r.water_ml / current_user.water_goal if current_user.water_goal else 0) * 33 +
-                (r.protein_g / current_user.protein_goal if current_user.protein_goal else 0) * 33 +
-                ((r.strength_min + r.cardio_min) /
-                 (current_user.strength_goal + current_user.cardio_goal)
-                 if (current_user.strength_goal + current_user.cardio_goal) else 0) * 34
-            ),
-            100,
-        )
-        data[str(r.date)] = {
-            "water_ml": r.water_ml,
-            "protein_g": r.protein_g,
-            "strength_min": r.strength_min,
-            "cardio_min": r.cardio_min,
-            "score": score,
-        }
+        labels.append(f"{m}월")
+        if records:
+            n = len(records)
+            water.append(round(sum(r.water_ml     for r in records) / n))
+            protein.append(round(sum(r.protein_g   for r in records) / n, 1))
+            strength.append(round(sum(r.strength_min for r in records) / n))
+            cardio.append(round(sum(r.cardio_min   for r in records) / n))
+        else:
+            water.append(0)
+            protein.append(0.0)
+            strength.append(0)
+            cardio.append(0)
 
-    return {"year": y, "month": m, "days": data}
+    exercise = [s + c for s, c in zip(strength, cardio)]
+    cluster  = get_cluster_comparison(db, current_user.id)
+
+    return {
+        "labels":       labels,
+        "water":        water,
+        "protein":      protein,
+        "strength":     strength,
+        "cardio":       cardio,
+        "avg_water":    safe_avg(water),
+        "avg_protein":  safe_avg(protein),
+        "avg_strength": safe_avg(strength),
+        "avg_cardio":   safe_avg(cardio),
+        "water_trend":    calc_trend(water),
+        "protein_trend":  calc_trend(protein),
+        "exercise_trend": calc_trend(exercise),
+        **cluster,
+    }

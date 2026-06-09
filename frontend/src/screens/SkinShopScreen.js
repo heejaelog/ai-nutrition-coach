@@ -24,9 +24,10 @@ function SkinCard({ item, equippedId, onBuy, onEquip, onUnequip }) {
 
   return (
     <View style={[card, styles.skinCard, isEquipped && styles.skinCardEquipped]}>
-      {/* 플레이스홀더 아이콘 (나중에 실제 이미지로 교체) */}
-      <View style={[styles.skinImgBox, { backgroundColor: color + '22', borderColor: color + '55' }]}>
-        <Image source={SKIN_IMAGES[item.image_key] || DEFAULT_TURTLE} style={styles.skinImg} resizeMode="contain" />
+      <View style={styles.skinImgWrapper}>
+        <View style={[styles.skinImgBox, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+          <Image source={SKIN_IMAGES[item.image_key] || DEFAULT_TURTLE} style={styles.skinImg} resizeMode="contain" />
+        </View>
         {isEquipped && (
           <View style={styles.equippedBadge}>
             <Ionicons name="checkmark-circle" size={18} color={C.primary} />
@@ -213,11 +214,14 @@ const styles = StyleSheet.create({
   skinImgBox: {
     width: 72, height: 72, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, marginBottom: 10, position: 'relative',
+    borderWidth: 1.5, overflow: 'hidden',
   },
-  skinImg: { width: 48, height: 48 },
+  skinImg: { width: 72, height: 72 },
+  skinImgWrapper: {
+    position: 'relative', marginBottom: 10,
+  },
   equippedBadge: {
-    position: 'absolute', top: -8, right: -8,
+    position: 'absolute', top: -6, right: -6,
     backgroundColor: '#fff', borderRadius: 10,
   },
   skinName: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 4, textAlign: 'center' },
